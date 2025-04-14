@@ -1337,44 +1337,64 @@ function displayPredict() {
         const userId = document.getElementById('predictUserId')?.value || '';
         const token = document.getElementById('predictToken')?.value.trim().toUpperCase() || '';
         const submitButton = document.getElementById('submitPredictions');
-        const today = new Date().toLocaleDateString('en-CA');
-        const todayMatches = iplSchedule.filter(m => m.date === today);
+        const now = new Date();
+        const today = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+        const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
 
         if (!matchesContainer || !todaysMatchesContainer || !submitButton) {
             console.error('Predict containers not found');
             return;
         }
 
+        // Today’s matches (date = today)
+        const todayMatches = iplSchedule.filter(m => m.date === today);
+
+        // Matches within 12 hours from now
+        const upcomingMatches = iplSchedule.filter(m => {
+            const matchDateTime = new Date(`${m.date}T${m.time}:00+05:30`);
+            return matchDateTime <= twelveHoursFromNow && matchDateTime >= now;
+        });
+
+        // Combine today’s and upcoming matches, remove duplicates
+        const displayMatches = Array.from(
+            new Map([...todayMatches, ...upcomingMatches].map(m => [m.id, m])).values()
+        );
+
+        // Update #todaysMatches (only today’s matches)
         if (todayMatches.length === 0) {
             todaysMatchesContainer.innerHTML = '<p class="no-matches">No matches scheduled for today.</p>';
-            matchesContainer.innerHTML = '<p>No matches scheduled for today.</p>';
+        } else {
+            todaysMatchesContainer.innerHTML = `
+                <h3>Today's Matches</h3>
+                <div class="matches-list">
+                    ${todayMatches.map(match => `
+                        <div class="match-card">
+                            <div class="teams">
+                                <div class="team">
+                                    ${teamLogos[match.team1] ? `<img src="${teamLogos[match.team1]}" alt="${match.team1}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team1}</span>` : `<span class="team-name">${match.team1}</span>`}
+                                </div>
+                                <span class="vs">vs</span>
+                                <div class="team">
+                                    ${teamLogos[match.team2] ? `<img src="${teamLogos[match.team2]}" alt="${match.team2}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team2}</span>` : `<span class="team-name">${match.team2}</span>`}
+                                </div>
+                            </div>
+                            <div class="details">
+                                <span class="time">${match.time} IST</span>
+                                ${match.venue ? `<span class="venue">, ${match.venue}</span>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // Update #predictMatches
+        if (displayMatches.length === 0) {
+            matchesContainer.innerHTML = '<p>No matches scheduled within the next 12 hours.</p>';
             submitButton.style.display = 'none';
             clearInterval(window.timerInterval);
             return;
         }
-
-        todaysMatchesContainer.innerHTML = `
-            <h3>Today's Matches</h3>
-            <div class="matches-list">
-                ${todayMatches.map(match => `
-                    <div class="match-card">
-                        <div class="teams">
-                            <div class="team">
-                                ${teamLogos[match.team1] ? `<img src="${teamLogos[match.team1]}" alt="${match.team1}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team1}</span>` : `<span class="team-name">${match.team1}</span>`}
-                            </div>
-                            <span class="vs">vs</span>
-                            <div class="team">
-                                ${teamLogos[match.team2] ? `<img src="${teamLogos[match.team2]}" alt="${match.team2}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team2}</span>` : `<span class="team-name">${match.team2}</span>`}
-                            </div>
-                        </div>
-                        <div class="details">
-                            <span class="time">${match.time} IST</span>
-                            ${match.venue ? `<span class="venue">, ${match.venue}</span>` : ''}
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
-        `;
 
         if (!userId || !token) {
             matchesContainer.innerHTML = '<p>Please select a user and enter a valid token.</p>';
@@ -1392,7 +1412,7 @@ function displayPredict() {
         }
 
         submitButton.style.display = 'block';
-        matchesContainer.innerHTML = todayMatches.map(match => {
+        matchesContainer.innerHTML = displayMatches.map(match => {
             const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
             const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
             const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
@@ -1450,7 +1470,6 @@ function displayPredict() {
         document.getElementById('predictError').textContent = 'Failed to load predictions.';
     }
 }
-
         // Display predictions tab with pie chart
        // Display predictions tab with pie chart
 let predictionsPieChartInstance = null;
