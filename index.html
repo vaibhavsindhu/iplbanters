@@ -219,6 +219,11 @@
         .pie-chart-item h4 {
             margin-bottom: 10px;
         }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #555;
+        }
         @media (max-width: 600px) {
             .tabs, .sub-tabs {
                 flex-direction: column;
@@ -452,15 +457,15 @@
                 drsUsed = drsData || [];
 
                 console.log('Fetched data:', { users, predictions, results, iplSchedule, drsUsed });
-
-                // Initialize UI after data fetch
-                populateUserDropdowns();
-                displayPredict();
-                displayPredictions();
-                displayLeaderboard();
             } catch (error) {
                 console.error('Error fetching data:', error);
-                alert('Failed to load data. Please try again.');
+                // Continue with empty arrays to allow navigation
+                users = [];
+                predictions = [];
+                results = [];
+                iplSchedule = [];
+                drsUsed = [];
+                document.getElementById('predictError').textContent = 'Failed to load data. Navigation is still available.';
             }
         }
 
@@ -472,7 +477,6 @@
                 console.log('Saved users:', users);
             } catch (error) {
                 console.error('Failed to save users:', error);
-                alert('Failed to save users.');
             }
         }
 
@@ -483,7 +487,6 @@
                 console.log('Saved predictions:', predictions);
             } catch (error) {
                 console.error('Failed to save predictions:', error);
-                alert('Failed to save predictions.');
             }
         }
 
@@ -494,7 +497,6 @@
                 console.log('Saved results:', results);
             } catch (error) {
                 console.error('Failed to save results:', error);
-                alert('Failed to save results.');
             }
         }
 
@@ -505,7 +507,6 @@
                 console.log('Saved schedule:', iplSchedule);
             } catch (error) {
                 console.error('Failed to save schedule:', error);
-                alert('Failed to save schedule.');
             }
         }
 
@@ -516,12 +517,12 @@
                 console.log('Saved DRS used:', drsUsed);
             } catch (error) {
                 console.error('Failed to save DRS used:', error);
-                alert('Failed to save DRS used.');
             }
         }
 
         // Admin login
         function checkAdminAccess(tabId) {
+            console.log('Checking admin access for:', tabId);
             if (localStorage.getItem('adminLoggedIn') === 'true') {
                 switchTab(tabId);
                 return;
@@ -538,42 +539,71 @@
 
         // Switch main tab
         function switchTab(tabId) {
+            console.log('Switching to tab:', tabId);
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
-            document.getElementById(tabId).classList.add('active');
-            console.log(`Switched to tab: ${tabId}`);
+            const tab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+            const content = document.getElementById(tabId);
+            if (tab && content) {
+                tab.classList.add('active');
+                content.classList.add('active');
+            } else {
+                console.error('Tab or content not found:', tabId);
+                return;
+            }
 
-            if (tabId === 'predict') displayPredict();
-            else if (tabId === 'predictions') displayPredictions();
-            else if (tabId === 'leaderboard') displayLeaderboard();
-            else if (tabId === 'admin') {
+            if (tabId === 'predict') {
+                displayPredict();
+            } else if (tabId === 'predictions') {
+                displayPredictions();
+            } else if (tabId === 'leaderboard') {
+                displayLeaderboard();
+            } else if (tabId === 'admin') {
                 switchSubTab('admin-users');
             }
         }
 
         // Switch admin sub-tab
         function switchSubTab(subTabId) {
+            console.log('Switching to sub-tab:', subTabId);
             document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`.sub-tab[data-sub-tab="${subTabId}"]`).classList.add('active');
-            document.getElementById(subTabId).classList.add('active');
-            console.log(`Switched to sub-tab: ${subTabId}`);
+            const subTab = document.querySelector(`.sub-tab[data-sub-tab="${subTabId}"]`);
+            const content = document.getElementById(subTabId);
+            if (subTab && content) {
+                subTab.classList.add('active');
+                content.classList.add('active');
+            } else {
+                console.error('Sub-tab or content not found:', subTabId);
+                return;
+            }
 
-            if (subTabId === 'admin-users') displayAdminUsers();
-            else if (subTabId === 'admin-schedule') displayAdminSchedule();
-            else if (subTabId === 'admin-results') displayAdminResults();
+            if (subTabId === 'admin-users') {
+                displayAdminUsers();
+            } else if (subTabId === 'admin-schedule') {
+                displayAdminSchedule();
+            } else if (subTabId === 'admin-results') {
+                displayAdminResults();
+            }
         }
 
         // Tab navigation
         function initializeTabs() {
+            console.log('Initializing tabs');
             const tabs = document.querySelectorAll('.tab');
             const subTabs = document.querySelectorAll('.sub-tab');
             const isAdminLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
 
-            document.getElementById('adminTab').classList.remove('hidden');
+            // Ensure admin tab is visible
+            const adminTab = document.getElementById('adminTab');
+            if (adminTab) {
+                adminTab.classList.remove('hidden');
+            }
+
+            // Set initial tab
             switchTab(isAdminLoggedIn ? 'admin' : 'predict');
 
+            // Remove existing listeners to prevent duplicates
             tabs.forEach(tab => {
                 tab.removeEventListener('click', handleTabClick);
                 tab.addEventListener('click', handleTabClick);
@@ -587,20 +617,19 @@
             function handleTabClick(e) {
                 const tab = e.currentTarget;
                 const tabId = tab.dataset.tab;
-                console.log(`Tab clicked: ${tabId}`);
+                console.log('Tab clicked:', tabId);
 
                 if (tabId === 'admin' && localStorage.getItem('adminLoggedIn') !== 'true') {
                     checkAdminAccess(tabId);
-                    return;
+                } else {
+                    switchTab(tabId);
                 }
-
-                switchTab(tabId);
             }
 
             function handleSubTabClick(e) {
                 const subTab = e.currentTarget;
                 const subTabId = subTab.dataset.subTab;
-                console.log(`Sub-tab clicked: ${subTabId}`);
+                console.log('Sub-tab clicked:', subTabId);
                 switchSubTab(subTabId);
             }
         }
@@ -793,7 +822,6 @@
                     <option value="${m.id}" ${m.id === editingMatchId ? 'selected' : ''}>${m.date}: ${m.team1} vs ${m.team2}</option>
                 `).join('');
 
-            // Trigger change event if editing to populate fields
             if (editingMatchId) {
                 matchSelect.dispatchEvent(new Event('change'));
             }
@@ -873,7 +901,6 @@
                 });
             });
 
-            // Winning teams
             const winnersList = document.getElementById('winnersList');
             const teamWins = {};
             results.forEach(r => {
@@ -915,7 +942,6 @@
             userSelect.innerHTML = '<option value="">Select a user</option>' +
                 users.map(user => `<option value="${user.id}">${user.name}</option>`).join('');
 
-            // Add change listener to update Predict tab
             userSelect.removeEventListener('change', handleUserChange);
             userSelect.addEventListener('change', handleUserChange);
 
@@ -1045,7 +1071,6 @@
                 </table>
             ` : '<p>No live predictions available.</p>';
 
-            // Pie chart
             if (predictionsPieChartInstance) predictionsPieChartInstance.destroy();
             const ctx = document.getElementById('predictionsPieChart').getContext('2d');
             const teamCounts = {};
@@ -1165,7 +1190,6 @@
                 </table>
             ` : '<p>No leaderboard data available.</p>';
 
-            // Bar chart
             if (userBarChartInstance) userBarChartInstance.destroy();
             const barCtx = document.getElementById('userBarChart').getContext('2d');
             userBarChartInstance = new Chart(barCtx, {
@@ -1222,7 +1246,6 @@
                 }
             });
 
-            // Pie charts
             const pieContainer = document.getElementById('userPieCharts');
             pieContainer.innerHTML = '';
             userPieChartInstances.forEach(instance => instance.destroy());
@@ -1518,12 +1541,18 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log('App initialized');
-            await fetchData();
-            initializeTabs();
+            console.log('App initializing');
+            initializeTabs(); // Initialize tabs immediately
+            await fetchData(); // Fetch data after tabs are set up
+            // Update UI after data is fetched
+            populateUserDropdowns();
+            displayPredict();
+            displayPredictions();
+            displayLeaderboard();
             if (localStorage.getItem('adminLoggedIn') === 'true') {
                 switchTab('admin');
             }
+            console.log('App initialized');
         });
 
         // PWA setup
