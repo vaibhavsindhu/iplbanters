@@ -1261,79 +1261,85 @@ function generateId() {
         }
 
         // Admin user form
-        document.getElementById('adminUserForm').addEventListener('submit', async e => {
-            e.preventDefault();
-            const userName = document.getElementById('adminNewUserName').value.trim();
-            const isAdmin = document.getElementById('isAdmin').checked;
-            const userError = document.getElementById('adminUserError');
-            const userSuccess = document.getElementById('adminUserSuccess');
-            const form = e.target;
-            const userId = form.dataset.id;
+      document.getElementById('adminUserForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const userName = document.getElementById('adminNewUserName').value.trim();
+    const isAdmin = document.getElementById('isAdmin').checked;
+    const userError = document.getElementById('adminUserError');
+    const userSuccess = document.getElementById('adminUserSuccess');
+    const form = e.target;
+    const userId = form.dataset.id;
 
-            console.log('Admin user form submitted:', { userName, isAdmin, userId });
+    console.log('Admin user form submitted:', { userName, isAdmin, userId });
 
-            if (!userName) {
-                userError.textContent = 'User name is required.';
-                userSuccess.textContent = '';
-                return;
+    if (!userName) {
+        userError.textContent = 'User name is required.';
+        userSuccess.textContent = '';
+        return;
+    }
+
+    try {
+        // Check for existing users with the same name (case-insensitive)
+        const { data: existingUsers, error: checkError } = await supabase
+            .from('users')
+            .select('id, name')
+            .eq('name', userName); // Use exact match for simplicity
+        if (checkError) {
+            console.error('Check error:', checkError);
+            throw new Error(`Error checking user name: ${checkError.message}`);
+        }
+
+        if (!userId && existingUsers.length > 0) {
+            userError.textContent = 'User name already exists.';
+            userSuccess.textContent = '';
+            return;
+        }
+        if (userId && existingUsers.some(u => u.id !== userId)) {
+            userError.textContent = 'User name already taken by another user.';
+            userSuccess.textContent = '';
+            return;
+        }
+
+        if (userId) {
+            // Update existing user
+            const updatedUser = { name: userName, is_admin: isAdmin };
+            const { error: updateError } = await supabase
+                .from('users')
+                .update(updatedUser)
+                .eq('id', userId);
+            if (updateError) {
+                console.error('Update error:', updateError);
+                throw new Error(`Failed to update user: ${updateError.message}`);
             }
-
-            try {
-                const { data: existingUsers, error: checkError } = await supabase
-                    .from('users')
-                    .select('id, name')
-                    .ilike('name', userName);
-                if (checkError) {
-                    userError.textContent = 'Error checking user name.';
-                    userSuccess.textContent = '';
-                    console.error('Check error:', checkError);
-                    return;
-                }
-
-                if (!userId && existingUsers.some(u => u.name.toLowerCase() === userName.toLowerCase())) {
-                    userError.textContent = 'User name already exists.';
-                    userSuccess.textContent = '';
-                    return;
-                }
-                if (userId && existingUsers.some(u => u.id !== userId && u.name.toLowerCase() === userName.toLowerCase())) {
-                    userError.textContent = 'User name already taken by another user.';
-                    userSuccess.textContent = '';
-                    return;
-                }
-
-                if (userId) {
-                    // Update existing user
-                    const { error: updateError } = await supabase
-                        .from('users')
-                        .update({ name: userName, is_admin: isAdmin })
-                        .eq('id', userId);
-                    if (updateError) throw updateError;
-                    users = users.map(u => u.id === userId ? { ...u, name: userName, is_admin: isAdmin } : u);
-                    userSuccess.textContent = `Updated ${userName}${isAdmin ? ' as admin' : ''}!`;
-                } else {
-                    // Add new user
-                    const newUser = { id: generateId(), name: userName, is_admin: isAdmin };
-                    const { error: insertError } = await supabase
-                        .from('users')
-                        .insert([newUser]);
-                    if (insertError) throw insertError;
-                    users.push(newUser);
-                    userSuccess.textContent = `Added ${userName}${isAdmin ? ' as admin' : ''}!`;
-                }
-
-                userError.textContent = '';
-                form.reset();
-                delete form.dataset.id;
-                document.getElementById('userFormTitle').textContent = 'Add User';
-                document.getElementById('adminUserForm').querySelector('button').textContent = 'Add User';
-                displayAdminUsers();
-                displayLeaderboard();
-            } catch (error) {
-                console.error('Error saving user:', error);
-                userError.textContent = 'Failed to save user to database.';
-                userSuccess.textContent = '';
+            users = users.map(u => (u.id === userId ? { ...u, name: userName, is_admin: isAdmin } : u));
+            userSuccess.textContent = `Updated ${userName}${isAdmin ? ' as admin' : ''}!`;
+        } else {
+            // Add new user
+            const newUser = { id: generateId(), name: userName, is_admin: isAdmin };
+            const { error: insertError } = await supabase
+                .from('users')
+                .insert([newUser]);
+            if (insertError) {
+                console.error('Insert error:', insertError);
+                throw new Error(`Failed to add user: ${insertError.message}`);
             }
-        });
+            users.push(newUser);
+            userSuccess.textContent = `Added ${userName}${isAdmin ? ' as admin' : ''}!`;
+        }
+
+        userError.textContent = '';
+        form.reset();
+        delete form.dataset.id;
+        document.getElementById('userFormTitle').textContent = 'Add User';
+        document.getElementById('adminUserForm').querySelector('button').textContent = 'Add User';
+        displayAdminUsers();
+        displayLeaderboard();
+    } catch (error) {
+        console.error('Error saving user:', error);
+        userError.textContent = error.message || 'Failed to save user to database.';
+        userSuccess.textContent = '';
+    }
+});
 
         // CSV import
         document.getElementById('matchCsv').addEventListener('change', handleCsvImport);
