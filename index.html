@@ -409,13 +409,13 @@
     </div>
 
     <script>
-        // Initialize Supabase client
-        const supabase = Supabase.createClient('https://cinrdyzazzxchoqffmrk.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbnJkeXphenp4Y2hvcWZmbXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ2MDI0MTMsImV4cCI6MjA2MDE3ODQxM30.5bEroboJkXGr9VTeuuVmMn6yz_SNZc7ZGCN0HmAilIg');
+      // Initialize Supabase client
+const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbnJkeXphenp4Y2hvcWZmbXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ2MDI0MTMsImV4cCI6MjA2MDE3ODQxM30.5bEroboJkXGr9VTeuuVmMn6yz_SNZc7ZGCN0HmAilIg');
 
-        // Generate unique ID
-        function generateId() {
-            return Math.random().toString(36).substr(2, 9);
-        }
+// Generate unique ID
+function generateId() {
+    return Math.random().toString(36).substr(2, 9);
+}
 
         // Valid teams
         const validTeams = ["CSK", "MI", "RCB", "KKR", "SRH", "RR", "GT", "DC", "LSG", "PBKS"];
