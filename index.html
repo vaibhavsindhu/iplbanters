@@ -1035,80 +1035,7 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
         });
     });
 }
-// Edit match form submission
-document.getElementById('editMatchForm').addEventListener('submit', async e => {
-    e.preventDefault();
-    const matchId = document.getElementById('editMatchId').value;
-    const date = document.getElementById('editMatchDate').value;
-    const time = document.getElementById('editMatchTime').value;
-    const team1 = document.getElementById('editMatchTeam1').value;
-    const team2 = document.getElementById('editMatchTeam2').value;
-    const venue = document.getElementById('editMatchVenue').value.trim();
-    const error = document.getElementById('editMatchError');
-    const success = document.getElementById('editMatchSuccess');
 
-    if (!date || !time || !team1 || !team2 || !venue) {
-        error.textContent = 'All fields are required.';
-        success.textContent = '';
-        return;
-    }
-    if (team1 === team2) {
-        error.textContent = 'Teams must be different.';
-        success.textContent = '';
-        return;
-    }
-    if (!validTeams.includes(team1) || !validTeams.includes(team2)) {
-        error.textContent = 'Invalid team selected.';
-        success.textContent = '';
-        return;
-    }
-    if (!['15:30', '19:30'].includes(time)) {
-        error.textContent = 'Invalid time selected.';
-        success.textContent = '';
-        return;
-    }
-    const existingMatch = iplSchedule.find(m => m.date === date && m.team1 === team1 && m.team2 === team2 && m.id !== matchId);
-    if (existingMatch) {
-        error.textContent = 'Match already exists on this date with these teams.';
-        success.textContent = '';
-        return;
-    }
-
-    const istDateTime = new Date(`${date}T${time}:00+05:30`);
-    istDateTime.setMinutes(istDateTime.getMinutes() - 30);
-    const deadline = istDateTime.toISOString();
-
-    const updatedMatch = { id: matchId, date, team1, team2, time, deadline, venue };
-
-    try {
-        const { error: updateError } = await supabase.from('ipl_schedule').update(updatedMatch).eq('id', matchId);
-        if (updateError) throw updateError;
-        iplSchedule = iplSchedule.map(m => m.id === matchId ? updatedMatch : m);
-        success.textContent = 'Match updated successfully!';
-        error.textContent = '';
-        document.getElementById('editMatchModal').style.display = 'none';
-        displayAdminSchedule();
-        displayPredict();
-        displayAdminResults();
-    } catch (err) {
-        error.textContent = 'Failed to update match.';
-        success.textContent = '';
-        console.error('Update match error:', err);
-    }
-});
-
-// Close modal
-document.querySelector('#editMatchModal .close').addEventListener('click', () => {
-    document.getElementById('editMatchModal').style.display = 'none';
-    document.getElementById('editMatchError').textContent = '';
-    document.getElementById('editMatchSuccess').textContent = '';
-});
-
-document.getElementById('cancelEditMatch').addEventListener('click', () => {
-    document.getElementById('editMatchModal').style.display = 'none';
-    document.getElementById('editMatchError').textContent = '';
-    document.getElementById('editMatchSuccess').textContent = '';
-});
         // Populate match dropdown and update form
         function populateMatchDropdown(editingMatchId = null) {
             const matchSelect = document.getElementById('matchSelect');
@@ -1946,6 +1873,83 @@ function displayPredictions() {
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./service-worker.js').catch(err => console.error('Service Worker error:', err));
         }
+
+
+        // -----for edit schedule functionality
+        // Edit match form submission
+document.getElementById('editMatchForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const matchId = document.getElementById('editMatchId').value;
+    const date = document.getElementById('editMatchDate').value;
+    const time = document.getElementById('editMatchTime').value;
+    const team1 = document.getElementById('editMatchTeam1').value;
+    const team2 = document.getElementById('editMatchTeam2').value;
+    const venue = document.getElementById('editMatchVenue').value.trim();
+    const error = document.getElementById('editMatchError');
+    const success = document.getElementById('editMatchSuccess');
+
+    if (!date || !time || !team1 || !team2 || !venue) {
+        error.textContent = 'All fields are required.';
+        success.textContent = '';
+        return;
+    }
+    if (team1 === team2) {
+        error.textContent = 'Teams must be different.';
+        success.textContent = '';
+        return;
+    }
+    if (!validTeams.includes(team1) || !validTeams.includes(team2)) {
+        error.textContent = 'Invalid team selected.';
+        success.textContent = '';
+        return;
+    }
+    if (!['15:30', '19:30'].includes(time)) {
+        error.textContent = 'Invalid time selected.';
+        success.textContent = '';
+        return;
+    }
+    const existingMatch = iplSchedule.find(m => m.date === date && m.team1 === team1 && m.team2 === team2 && m.id !== matchId);
+    if (existingMatch) {
+        error.textContent = 'Match already exists on this date with these teams.';
+        success.textContent = '';
+        return;
+    }
+
+    const istDateTime = new Date(`${date}T${time}:00+05:30`);
+    istDateTime.setMinutes(istDateTime.getMinutes() - 30);
+    const deadline = istDateTime.toISOString();
+
+    const updatedMatch = { id: matchId, date, team1, team2, time, deadline, venue };
+
+    try {
+        const { error: updateError } = await supabase.from('ipl_schedule').update(updatedMatch).eq('id', matchId);
+        if (updateError) throw updateError;
+        iplSchedule = iplSchedule.map(m => m.id === matchId ? updatedMatch : m);
+        success.textContent = 'Match updated successfully!';
+        error.textContent = '';
+        document.getElementById('editMatchModal').style.display = 'none';
+        displayAdminSchedule();
+        displayPredict();
+        displayAdminResults();
+    } catch (err) {
+        error.textContent = 'Failed to update match.';
+        success.textContent = '';
+        console.error('Update match error:', err);
+    }
+});
+
+// Close modal
+document.querySelector('#editMatchModal .close').addEventListener('click', () => {
+    document.getElementById('editMatchModal').style.display = 'none';
+    document.getElementById('editMatchError').textContent = '';
+    document.getElementById('editMatchSuccess').textContent = '';
+});
+
+document.getElementById('cancelEditMatch').addEventListener('click', () => {
+    document.getElementById('editMatchModal').style.display = 'none';
+    document.getElementById('editMatchError').textContent = '';
+    document.getElementById('editMatchSuccess').textContent = '';
+});
     </script>
 
     <!-- Edit match modal -->
