@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-     <script src="https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/index.min.js"></script>
+<!--      <script src="https://cdn.jsdelivr.net/npm/uuid@10.0.0/dist/index.min.js"></script> -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -414,8 +414,15 @@
 const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbnJkeXphenp4Y2hvcWZmbXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ2MDI0MTMsImV4cCI6MjA2MDE3ODQxM30.5bEroboJkXGr9VTeuuVmMn6yz_SNZc7ZGCN0HmAilIg');
 
 // Generate unique ID
-function generateId() {
-    return uuid.v4();
+// function generateId() {
+//     return uuid.v4();
+// }
+        function generateId() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+    });
 }
 
         // Valid teams
