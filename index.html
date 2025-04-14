@@ -1256,8 +1256,9 @@ document.getElementById('generateToken').addEventListener('click', () => {
         }
 
         // Populate user dropdown
-       function populateUserDropdowns() {
+    function populateUserDropdowns() {
     const userSelect = document.getElementById('predictUserId');
+    const tokenInput = document.getElementById('predictToken');
     if (!users || users.length === 0) {
         userSelect.innerHTML = '<option value="">No users available</option>';
         console.warn('No users to populate dropdown');
@@ -1266,11 +1267,22 @@ document.getElementById('generateToken').addEventListener('click', () => {
             users.map(user => `<option value="${user.id}">${user.name}</option>`).join('');
         console.log('Populated dropdown with users:', users);
     }
+
+    // Remove old listeners
     userSelect.removeEventListener('change', handleUserChange);
+    tokenInput.removeEventListener('input', handleTokenInput);
+
+    // Add new listeners
     userSelect.addEventListener('change', handleUserChange);
+    tokenInput.addEventListener('input', handleTokenInput);
 
     function handleUserChange() {
         console.log('User changed to:', userSelect.value);
+        displayPredict();
+    }
+
+    function handleTokenInput() {
+        console.log('Token input:', tokenInput.value);
         displayPredict();
     }
 }
@@ -1324,10 +1336,11 @@ function displayPredict() {
         const todaysMatchesContainer = document.getElementById('todaysMatches');
         const userId = document.getElementById('predictUserId')?.value || '';
         const token = document.getElementById('predictToken')?.value.trim().toUpperCase() || '';
+        const submitButton = document.getElementById('submitPredictions');
         const today = new Date().toLocaleDateString('en-CA');
         const todayMatches = iplSchedule.filter(m => m.date === today);
 
-        if (!matchesContainer || !todaysMatchesContainer) {
+        if (!matchesContainer || !todaysMatchesContainer || !submitButton) {
             console.error('Predict containers not found');
             return;
         }
@@ -1335,7 +1348,7 @@ function displayPredict() {
         if (todayMatches.length === 0) {
             todaysMatchesContainer.innerHTML = '<p class="no-matches">No matches scheduled for today.</p>';
             matchesContainer.innerHTML = '<p>No matches scheduled for today.</p>';
-            document.getElementById('submitPredictions').style.display = 'none';
+            submitButton.style.display = 'none';
             clearInterval(window.timerInterval);
             return;
         }
@@ -1365,7 +1378,7 @@ function displayPredict() {
 
         if (!userId || !token) {
             matchesContainer.innerHTML = '<p>Please select a user and enter a valid token.</p>';
-            document.getElementById('submitPredictions').style.display = 'none';
+            submitButton.style.display = 'none';
             clearInterval(window.timerInterval);
             return;
         }
@@ -1373,12 +1386,12 @@ function displayPredict() {
         const user = users.find(u => u.id === userId && u.token === token);
         if (!user) {
             matchesContainer.innerHTML = '<p>Invalid token for selected user.</p>';
-            document.getElementById('submitPredictions').style.display = 'none';
+            submitButton.style.display = 'none';
             clearInterval(window.timerInterval);
             return;
         }
 
-        document.getElementById('submitPredictions').style.display = 'block';
+        submitButton.style.display = 'block';
         matchesContainer.innerHTML = todayMatches.map(match => {
             const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
             const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
@@ -1870,7 +1883,7 @@ function displayPredictions() {
         });
 
         // Predict form submission
-      document.getElementById('submitPredictions').addEventListener('click', async () => {
+   document.getElementById('submitPredictions').addEventListener('click', async () => {
     try {
         const userId = document.getElementById('predictUserId')?.value || '';
         const token = document.getElementById('predictToken')?.value.trim().toUpperCase() || '';
