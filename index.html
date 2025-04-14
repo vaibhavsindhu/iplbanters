@@ -9,6 +9,7 @@
     <link rel="icon" href="./icon.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -408,6 +409,9 @@
     </div>
 
     <script>
+        // Initialize Supabase client
+        const supabase = Supabase.createClient('https://cinrdyzazzxchoqffmrk.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbnJkeXphenp4Y2hvcWZmbXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ2MDI0MTMsImV4cCI6MjA2MDE3ODQxM30.5bEroboJkXGr9VTeuuVmMn6yz_SNZc7ZGCN0HmAilIg');
+
         // Generate unique ID
         function generateId() {
             return Math.random().toString(36).substr(2, 9);
@@ -418,57 +422,91 @@
         const ADMIN_PASSWORD = "Dhoni123";
 
         // Initialize data
-        let users = JSON.parse(localStorage.getItem('users')) || [
-            { id: generateId(), name: "Vaibhav", isAdmin: true }
-        ];
-        let predictions = JSON.parse(localStorage.getItem('predictions')) || [];
-        let results = JSON.parse(localStorage.getItem('results')) || [];
-        let iplSchedule = JSON.parse(localStorage.getItem('iplSchedule')) || [];
-        let drsUsed = JSON.parse(localStorage.getItem('drsUsed')) || [];
+        let users = [];
+        let predictions = [];
+        let results = [];
+        let iplSchedule = [];
+        let drsUsed = [];
 
-        // Save data
-        function saveUsers() {
+        // Fetch data from Supabase
+        async function fetchData() {
             try {
-                localStorage.setItem('users', JSON.stringify(users));
-                console.log('Saved users:', users);
-            } catch (e) {
-                console.error('Failed to save users:', e);
+                const { data: usersData, error: usersError } = await supabase.from('users').select('*');
+                if (usersError) throw usersError;
+                users = usersData || [];
+
+                const { data: predictionsData, error: predictionsError } = await supabase.from('predictions').select('*');
+                if (predictionsError) throw predictionsError;
+                predictions = predictionsData || [];
+
+                const { data: resultsData, error: resultsError } = await supabase.from('results').select('*');
+                if (resultsError) throw resultsError;
+                results = resultsData || [];
+
+                const { data: scheduleData, error: scheduleError } = await supabase.from('ipl_schedule').select('*');
+                if (scheduleError) throw scheduleError;
+                iplSchedule = scheduleData || [];
+
+                const { data: drsData, error: drsError } = await supabase.from('drs_used').select('*');
+                if (drsError) throw drsError;
+                drsUsed = drsData || [];
+
+                console.log('Fetched data:', { users, predictions, results, iplSchedule, drsUsed });
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('adminUserError').textContent = 'Failed to load data from database.';
             }
         }
 
-        function savePredictions() {
+        // Save data to Supabase
+        async function saveUsers() {
             try {
-                localStorage.setItem('predictions', JSON.stringify(predictions));
+                const { error } = await supabase.from('users').upsert(users, { onConflict: 'id' });
+                if (error) throw error;
+                console.log('Saved users to Supabase:', users);
+            } catch (error) {
+                console.error('Failed to save users:', error);
+                document.getElementById('adminUserError').textContent = 'Failed to save users to database.';
+            }
+        }
+
+        async function savePredictions() {
+            try {
+                const { error } = await supabase.from('predictions').upsert(predictions, { onConflict: ['user_id', 'match_id'] });
+                if (error) throw error;
                 console.log('Saved predictions:', predictions);
-            } catch (e) {
-                console.error('Failed to save predictions:', e);
+            } catch (error) {
+                console.error('Failed to save predictions:', error);
             }
         }
 
-        function saveResults() {
+        async function saveResults() {
             try {
-                localStorage.setItem('results', JSON.stringify(results));
+                const { error } = await supabase.from('results').upsert(results, { onConflict: 'id' });
+                if (error) throw error;
                 console.log('Saved results:', results);
-            } catch (e) {
-                console.error('Failed to save results:', e);
+            } catch (error) {
+                console.error('Failed to save results:', error);
             }
         }
 
-        function saveIplSchedule() {
+        async function saveIplSchedule() {
             try {
-                localStorage.setItem('iplSchedule', JSON.stringify(iplSchedule));
+                const { error } = await supabase.from('ipl_schedule').upsert(iplSchedule, { onConflict: 'id' });
+                if (error) throw error;
                 console.log('Saved schedule:', iplSchedule);
-            } catch (e) {
-                console.error('Failed to save schedule:', e);
+            } catch (error) {
+                console.error('Failed to save schedule:', error);
             }
         }
 
-        function saveDrsUsed() {
+        async function saveDrsUsed() {
             try {
-                localStorage.setItem('drsUsed', JSON.stringify(drsUsed));
+                const { error } = await supabase.from('drs_used').upsert(drsUsed, { onConflict: ['user_id', 'match_id'] });
+                if (error) throw error;
                 console.log('Saved DRS used:', drsUsed);
-            } catch (e) {
-                console.error('Failed to save DRS used:', e);
+            } catch (error) {
+                console.error('Failed to save DRS used:', error);
             }
         }
 
@@ -492,8 +530,12 @@
         function switchTab(tabId) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`.tab[data-tab="${tabId}"]`).classList.add('active');
-            document.getElementById(tabId).classList.add('active');
+            const tab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+            const content = document.getElementById(tabId);
+            if (tab && content) {
+                tab.classList.add('active');
+                content.classList.add('active');
+            }
             console.log(`Switched to tab: ${tabId}`);
 
             if (tabId === 'predict') displayPredict();
@@ -565,7 +607,7 @@
         });
 
         // CSV import
-        function handleCsvImport(e) {
+        async function handleCsvImport(e) {
             const error = document.getElementById('csvError');
             const success = document.getElementById('csvSuccess');
             error.textContent = '';
@@ -579,43 +621,44 @@
             Papa.parse(e.target.files[0], {
                 header: true,
                 skipEmptyLines: true,
-                complete: results => {
+                complete: async results => {
                     let added = 0;
-                    results.data.forEach(row => {
+                    const newMatches = [];
+                    for (const row of results.data) {
                         if (!row.date || !row.team1 || !row.team2 || !row.time || !row.venue) {
                             console.warn('Skipping invalid row:', row);
-                            return;
+                            continue;
                         }
                         if (!validTeams.includes(row.team1) || !validTeams.includes(row.team2)) {
                             console.warn('Invalid teams:', row.team1, row.team2);
-                            return;
+                            continue;
                         }
                         if (row.team1 === row.team2) {
                             console.warn('Same teams:', row.team1);
-                            return;
+                            continue;
                         }
                         if (!['15:30', '19:30'].includes(row.time)) {
                             console.warn('Invalid time:', row.time);
-                            return;
+                            continue;
                         }
                         if (iplSchedule.some(m => m.date === row.date && m.team1 === row.team1 && m.team2 === row.team2)) {
                             console.warn('Duplicate match:', row.date, row.team1, row.team2);
-                            return;
+                            continue;
                         }
                         if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date)) {
                             console.warn('Invalid date format:', row.date);
-                            return;
+                            continue;
                         }
 
                         const istDateTime = new Date(`${row.date}T${row.time}:00+05:30`);
                         if (isNaN(istDateTime.getTime())) {
                             console.warn('Invalid date/time:', row.date, row.time);
-                            return;
+                            continue;
                         }
                         istDateTime.setMinutes(istDateTime.getMinutes() - 30);
                         const deadline = istDateTime.toISOString();
 
-                        iplSchedule.push({
+                        newMatches.push({
                             id: generateId(),
                             date: row.date,
                             team1: row.team1,
@@ -625,16 +668,17 @@
                             venue: row.venue.trim()
                         });
                         added++;
-                    });
+                    }
 
                     if (added === 0) {
                         error.textContent = 'No valid matches added. Check CSV format.';
                         return;
                     }
 
-                    saveIplSchedule();
+                    iplSchedule.push(...newMatches);
+                    await saveIplSchedule();
                     success.textContent = `Added ${added} matches!`;
-                    console.log('Imported matches:', iplSchedule);
+                    console.log('Imported matches:', newMatches);
                     displayAdminSchedule();
                     displayPredict();
                     displayAdminResults();
@@ -648,14 +692,14 @@
         }
 
         // Display admin users
-        function displayAdminUsers() {
+        async function displayAdminUsers() {
             const userList = document.getElementById('userList');
             userList.innerHTML = users.map(user => `
                 <div class="user-item">
-                    <span>${user.name}${user.isAdmin ? ' (Admin)' : ''}</span>
+                    <span>${user.name}${user.is_admin ? ' (Admin)' : ''}</span>
                     <div class="action-buttons">
                         <button class="edit-button edit-user small-button" data-id="${user.id}">Edit</button>
-                        <button class="danger-button delete-user small-button" data-id="${user.id}" ${predictions.some(p => p.userId === user.id) ? 'disabled' : ''}>Delete</button>
+                        <button class="danger-button delete-user small-button" data-id="${user.id}" ${predictions.some(p => p.user_id === user.id) ? 'disabled' : ''}>Delete</button>
                     </div>
                 </div>
             `).join('');
@@ -668,7 +712,7 @@
                     if (user) {
                         document.getElementById('userFormTitle').textContent = 'Edit User';
                         document.getElementById('adminNewUserName').value = user.name;
-                        document.getElementById('isAdmin').checked = user.isAdmin;
+                        document.getElementById('isAdmin').checked = user.is_admin;
                         document.getElementById('adminUserForm').dataset.id = userId;
                         document.getElementById('adminUserForm').querySelector('button').textContent = 'Update User';
                     }
@@ -677,15 +721,17 @@
 
             // Delete user
             document.querySelectorAll('.delete-user').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     const userId = btn.dataset.id;
                     if (confirm(`Delete user "${users.find(u => u.id === userId).name}"?`)) {
                         users = users.filter(u => u.id !== userId);
-                        predictions = predictions.filter(p => p.userId !== userId);
-                        drsUsed = drsUsed.filter(d => d.userId !== userId);
-                        saveUsers();
-                        savePredictions();
-                        saveDrsUsed();
+                        predictions = predictions.filter(p => p.user_id !== userId);
+                        drsUsed = drsUsed.filter(d => d.user_id !== userId);
+                        await Promise.all([
+                            supabase.from('users').delete().eq('id', userId),
+                            supabase.from('predictions').delete().eq('user_id', userId),
+                            supabase.from('drs_used').delete().eq('user_id', userId)
+                        ]);
                         displayAdminUsers();
                         displayLeaderboard();
                         populateUserDropdowns();
@@ -697,7 +743,7 @@
         }
 
         // Display admin schedule
-        function displayAdminSchedule() {
+        async function displayAdminSchedule() {
             const matchList = document.getElementById('matchList');
             matchList.innerHTML = iplSchedule.map(m => `
                 <div class="match-item">
@@ -707,17 +753,19 @@
             `).join('');
 
             document.querySelectorAll('.delete-match').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     if (confirm('Delete this match?')) {
                         const matchId = btn.dataset.id;
                         iplSchedule = iplSchedule.filter(m => m.id !== matchId);
-                        predictions = predictions.filter(p => p.matchId !== matchId);
-                        drsUsed = drsUsed.filter(d => d.matchId !== matchId);
-                        results = results.filter(r => !iplSchedule.some(m => m.id === r.matchId && m.id === matchId));
-                        saveIplSchedule();
-                        savePredictions();
-                        saveDrsUsed();
-                        saveResults();
+                        predictions = predictions.filter(p => p.match_id !== matchId);
+                        drsUsed = drsUsed.filter(d => d.match_id !== matchId);
+                        results = results.filter(r => r.match_id !== matchId);
+                        await Promise.all([
+                            supabase.from('ipl_schedule').delete().eq('id', matchId),
+                            supabase.from('predictions').delete().eq('match_id', matchId),
+                            supabase.from('drs_used').delete().eq('match_id', matchId),
+                            supabase.from('results').delete().eq('match_id', matchId)
+                        ]);
                         displayAdminSchedule();
                         displayPredict();
                         displayAdminResults();
@@ -729,7 +777,7 @@
         // Populate match dropdown and update form
         function populateMatchDropdown(editingMatchId = null) {
             const matchSelect = document.getElementById('matchSelect');
-            const existingResultMatchIds = results.map(r => r.matchId);
+            const existingResultMatchIds = results.map(r => r.match_id);
             const availableMatches = iplSchedule
                 .filter(m => !existingResultMatchIds.includes(m.id) || m.id === editingMatchId)
                 .sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -739,7 +787,6 @@
                     <option value="${m.id}" ${m.id === editingMatchId ? 'selected' : ''}>${m.date}: ${m.team1} vs ${m.team2}</option>
                 `).join('');
 
-            // Trigger change event if editing to populate fields
             if (editingMatchId) {
                 matchSelect.dispatchEvent(new Event('change'));
             }
@@ -770,17 +817,17 @@
         }
 
         // Display admin results
-        function displayAdminResults() {
+        async function displayAdminResults() {
             populateMatchDropdown();
 
             const resultList = document.getElementById('resultList');
             resultList.innerHTML = results.map(r => {
-                const match = iplSchedule.find(m => m.id === r.matchId);
+                const match = iplSchedule.find(m => m.id === r.match_id);
                 return match ? `
                     <div class="result-item">
                         <span>${match.date}: ${match.team1} vs ${match.team2}, Winner: ${r.winner}</span>
                         <div class="action-buttons">
-                            <button class="edit-button edit-result small-button" data-id="${r.id}" data-match-id="${r.matchId}">Edit</button>
+                            <button class="edit-button edit-result small-button" data-id="${r.id}" data-match-id="${r.match_id}">Edit</button>
                             <button class="danger-button delete-result small-button" data-id="${r.id}">Delete</button>
                         </div>
                     </div>
@@ -790,7 +837,7 @@
             document.querySelectorAll('.edit-result').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const resultId = btn.dataset.id;
-                    const matchId = btn.dataset.matchId;
+                    const matchId = btn.dataset.match_id;
                     const result = results.find(r => r.id === resultId);
                     const match = iplSchedule.find(m => m.id === matchId);
                     if (match && result) {
@@ -808,21 +855,21 @@
             });
 
             document.querySelectorAll('.delete-result').forEach(btn => {
-                btn.addEventListener('click', () => {
+                btn.addEventListener('click', async () => {
                     if (confirm('Delete this result?')) {
-                        results = results.filter(r => r.id !== btn.dataset.id);
-                        saveResults();
+                        const resultId = btn.dataset.id;
+                        results = results.filter(r => r.id !== resultId);
+                        await supabase.from('results').delete().eq('id', resultId);
                         displayAdminResults();
                         displayLeaderboard();
                     }
                 });
             });
 
-            // Winning teams
             const winnersList = document.getElementById('winnersList');
             const teamWins = {};
             results.forEach(r => {
-                const match = iplSchedule.find(m => m.id === r.matchId);
+                const match = iplSchedule.find(m => m.id === r.match_id);
                 if (match) {
                     teamWins[r.winner] = teamWins[r.winner] || { count: 0, matches: [] };
                     teamWins[r.winner].count++;
@@ -860,7 +907,6 @@
             userSelect.innerHTML = '<option value="">Select a user</option>' +
                 users.map(user => `<option value="${user.id}">${user.name}</option>`).join('');
 
-            // Add change listener to update Predict tab
             userSelect.removeEventListener('change', handleUserChange);
             userSelect.addEventListener('change', handleUserChange);
 
@@ -914,9 +960,9 @@
 
             document.getElementById('submitPredictions').style.display = 'block';
             matchesContainer.innerHTML = todayMatches.map(match => {
-                const hasPredicted = predictions.some(p => p.userId === userId && p.matchId === match.id);
-                const drsWasUsed = drsUsed.some(d => d.userId === userId && d.matchId === match.id);
-                const currentPrediction = hasPredicted ? predictions.find(p => p.userId === userId && p.matchId === match.id) : null;
+                const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+                const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
+                const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
                 const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
                 const isExpired = !deadline || new Date().getTime() >= deadline;
                 const localDeadline = match.deadline ? new Date(match.deadline).toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, dateStyle: 'short', timeStyle: 'short' }) : 'No deadline';
@@ -966,7 +1012,7 @@
             const list = document.getElementById('predictionsList');
             const now = new Date().getTime();
             const livePredictions = predictions.filter(p => {
-                const match = iplSchedule.find(m => m.id === p.matchId);
+                const match = iplSchedule.find(m => m.id === p.match_id);
                 return match && match.deadline && now < new Date(match.deadline).getTime();
             });
 
@@ -975,8 +1021,8 @@
                     <thead><tr><th>Date</th><th>User</th><th>Match</th><th>Team</th></tr></thead>
                     <tbody>
                         ${livePredictions.map(p => {
-                            const user = users.find(u => u.id === p.userId);
-                            const match = iplSchedule.find(m => m.id === p.matchId);
+                            const user = users.find(u => u.id === p.user_id);
+                            const match = iplSchedule.find(m => m.id === p.match_id);
                             return user && match ? `
                                 <tr>
                                     <td>${p.date}</td>
@@ -990,14 +1036,13 @@
                 </table>
             ` : '<p>No live predictions available.</p>';
 
-            // Pie chart
             if (predictionsPieChartInstance) predictionsPieChartInstance.destroy();
             const ctx = document.getElementById('predictionsPieChart').getContext('2d');
             const teamCounts = {};
             const teamUsers = {};
             livePredictions.forEach(p => {
                 teamCounts[p.team] = (teamCounts[p.team] || 0) + 1;
-                const user = users.find(u => u.id === p.userId);
+                const user = users.find(u => u.id === p.user_id);
                 if (user) {
                     teamUsers[p.team] = teamUsers[p.team] || [];
                     teamUsers[p.team].push(user.name);
@@ -1051,10 +1096,10 @@
         function displayLeaderboard() {
             const leaderboardList = document.getElementById('leaderboardList');
             const stats = users.map(user => {
-                const userPredictions = predictions.filter(p => p.userId === user.id);
+                const userPredictions = predictions.filter(p => p.user_id === user.id);
                 const wins = userPredictions.filter(p => {
                     const result = results.find(r => 
-                        r.matchId === p.matchId && r.winner === p.team
+                        r.match_id === p.match_id && r.winner === p.team
                     );
                     return !!result;
                 }).length;
@@ -1110,7 +1155,6 @@
                 </table>
             ` : '<p>No leaderboard data available.</p>';
 
-            // Bar chart
             if (userBarChartInstance) userBarChartInstance.destroy();
             const barCtx = document.getElementById('userBarChart').getContext('2d');
             userBarChartInstance = new Chart(barCtx, {
@@ -1167,7 +1211,6 @@
                 }
             });
 
-            // Pie charts
             const pieContainer = document.getElementById('userPieCharts');
             pieContainer.innerHTML = '';
             userPieChartInstances.forEach(instance => instance.destroy());
@@ -1218,7 +1261,7 @@
         }
 
         // Admin user form
-        document.getElementById('adminUserForm').addEventListener('submit', e => {
+        document.getElementById('adminUserForm').addEventListener('submit', async e => {
             e.preventDefault();
             const userName = document.getElementById('adminNewUserName').value.trim();
             const isAdmin = document.getElementById('isAdmin').checked;
@@ -1234,40 +1277,69 @@
                 userSuccess.textContent = '';
                 return;
             }
-            if (!userId && users.some(u => u.name.toLowerCase() === userName.toLowerCase())) {
-                userError.textContent = 'User name already exists.';
-                userSuccess.textContent = '';
-                return;
-            }
-            if (userId && users.some(u => u.id !== userId && u.name.toLowerCase() === userName.toLowerCase())) {
-                userError.textContent = 'User name already taken by another user.';
-                userSuccess.textContent = '';
-                return;
-            }
 
-            if (userId) {
-                users = users.map(u => u.id === userId ? { ...u, name: userName, isAdmin } : u);
-                userSuccess.textContent = `Updated ${userName}${isAdmin ? ' as admin' : ''}!`;
-            } else {
-                users.push({ id: generateId(), name: userName, isAdmin });
-                userSuccess.textContent = `Added ${userName}${isAdmin ? ' as admin' : ''}!`;
-            }
+            try {
+                const { data: existingUsers, error: checkError } = await supabase
+                    .from('users')
+                    .select('id, name')
+                    .ilike('name', userName);
+                if (checkError) {
+                    userError.textContent = 'Error checking user name.';
+                    userSuccess.textContent = '';
+                    console.error('Check error:', checkError);
+                    return;
+                }
 
-            saveUsers();
-            userError.textContent = '';
-            form.reset();
-            delete form.dataset.id;
-            document.getElementById('userFormTitle').textContent = 'Add User';
-            document.getElementById('adminUserForm').querySelector('button').textContent = 'Add User';
-            displayAdminUsers();
-            displayLeaderboard();
+                if (!userId && existingUsers.some(u => u.name.toLowerCase() === userName.toLowerCase())) {
+                    userError.textContent = 'User name already exists.';
+                    userSuccess.textContent = '';
+                    return;
+                }
+                if (userId && existingUsers.some(u => u.id !== userId && u.name.toLowerCase() === userName.toLowerCase())) {
+                    userError.textContent = 'User name already taken by another user.';
+                    userSuccess.textContent = '';
+                    return;
+                }
+
+                if (userId) {
+                    // Update existing user
+                    const { error: updateError } = await supabase
+                        .from('users')
+                        .update({ name: userName, is_admin: isAdmin })
+                        .eq('id', userId);
+                    if (updateError) throw updateError;
+                    users = users.map(u => u.id === userId ? { ...u, name: userName, is_admin: isAdmin } : u);
+                    userSuccess.textContent = `Updated ${userName}${isAdmin ? ' as admin' : ''}!`;
+                } else {
+                    // Add new user
+                    const newUser = { id: generateId(), name: userName, is_admin: isAdmin };
+                    const { error: insertError } = await supabase
+                        .from('users')
+                        .insert([newUser]);
+                    if (insertError) throw insertError;
+                    users.push(newUser);
+                    userSuccess.textContent = `Added ${userName}${isAdmin ? ' as admin' : ''}!`;
+                }
+
+                userError.textContent = '';
+                form.reset();
+                delete form.dataset.id;
+                document.getElementById('userFormTitle').textContent = 'Add User';
+                document.getElementById('adminUserForm').querySelector('button').textContent = 'Add User';
+                displayAdminUsers();
+                displayLeaderboard();
+            } catch (error) {
+                console.error('Error saving user:', error);
+                userError.textContent = 'Failed to save user to database.';
+                userSuccess.textContent = '';
+            }
         });
 
         // CSV import
         document.getElementById('matchCsv').addEventListener('change', handleCsvImport);
 
         // Manual match form
-        document.getElementById('matchForm').addEventListener('submit', e => {
+        document.getElementById('matchForm').addEventListener('submit', async e => {
             e.preventDefault();
             const date = document.getElementById('matchDateAdmin').value;
             const time = document.getElementById('matchTimeAdmin').value;
@@ -1299,16 +1371,9 @@
             istDateTime.setMinutes(istDateTime.getMinutes() - 30);
             const deadline = istDateTime.toISOString();
 
-            iplSchedule.push({
-                id: generateId(),
-                date,
-                team1,
-                team2,
-                time,
-                deadline,
-                venue
-            });
-            saveIplSchedule();
+            const newMatch = { id: generateId(), date, team1, team2, time, deadline, venue };
+            iplSchedule.push(newMatch);
+            await supabase.from('ipl_schedule').insert([newMatch]);
             error.textContent = '';
             success.textContent = 'Match added!';
             e.target.reset();
@@ -1318,7 +1383,7 @@
         });
 
         // Result form
-        document.getElementById('resultForm').addEventListener('submit', e => {
+        document.getElementById('resultForm').addEventListener('submit', async e => {
             e.preventDefault();
             const form = e.target;
             const matchId = document.getElementById('matchSelect').value;
@@ -1347,12 +1412,14 @@
             }
 
             if (form.dataset.id) {
-                results = results.map(r => r.id === form.dataset.id ? { id: r.id, matchId, date: match.date, team1: match.team1, team2: match.team2, winner } : r);
+                results = results.map(r => r.id === form.dataset.id ? { id: r.id, match_id: matchId, date: match.date, team1: match.team1, team2: match.team2, winner } : r);
+                await supabase.from('results').update({ match_id: matchId, date: match.date, team1: match.team1, team2: match.team2, winner }).eq('id', form.dataset.id);
             } else {
-                results.push({ id: generateId(), matchId, date: match.date, team1: match.team1, team2: match.team2, winner });
+                const newResult = { id: generateId(), match_id: matchId, date: match.date, team1: match.team1, team2: match.team2, winner };
+                results.push(newResult);
+                await supabase.from('results').insert([newResult]);
             }
 
-            saveResults();
             error.textContent = '';
             form.reset();
             delete form.dataset.id;
@@ -1365,7 +1432,7 @@
         });
 
         // Predict form submission
-        document.getElementById('submitPredictions').addEventListener('click', () => {
+        document.getElementById('submitPredictions').addEventListener('click', async () => {
             const userId = document.getElementById('predictUserId').value;
             const error = document.getElementById('predictError');
             const success = document.getElementById('predictSuccess');
@@ -1385,8 +1452,8 @@
             const updatedPredictions = [];
 
             todayMatches.forEach(match => {
-                const hasPredicted = predictions.some(p => p.userId === userId && p.matchId === match.id);
-                const drsWasUsed = drsUsed.some(d => d.userId === userId && d.matchId === match.id);
+                const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+                const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
                 const isExpired = match.deadline && new Date().getTime() >= new Date(match.deadline).getTime();
 
                 if (isExpired) return;
@@ -1398,8 +1465,8 @@
                         return;
                     }
                     newPredictions.push({
-                        userId,
-                        matchId: match.id,
+                        user_id: userId,
+                        match_id: match.id,
                         date: match.date,
                         team: selectedTeam.value
                     });
@@ -1407,12 +1474,12 @@
                     const drsTeam = document.querySelector(`input[name="drs-match-${match.id}"]:checked`);
                     if (drsTeam) {
                         updatedPredictions.push({
-                            userId,
-                            matchId: match.id,
+                            user_id: userId,
+                            match_id: match.id,
                             date: match.date,
                             team: drsTeam.value
                         });
-                        drsUsed.push({ userId, matchId: match.id });
+                        drsUsed.push({ user_id: userId, match_id: match.id });
                     }
                 }
             });
@@ -1429,16 +1496,22 @@
                 return;
             }
 
-            updatedPredictions.forEach(update => {
+            if (updatedPredictions.length > 0) {
                 predictions = predictions.map(p =>
-                    p.userId === update.userId && p.matchId === update.matchId ? update : p
+                    updatedPredictions.find(u => u.user_id === p.user_id && u.match_id === p.match_id) || p
                 );
-            });
+                await supabase.from('predictions').upsert(updatedPredictions, { onConflict: ['user_id', 'match_id'] });
+            }
 
-            predictions.push(...newPredictions);
+            if (newPredictions.length > 0) {
+                predictions.push(...newPredictions);
+                await supabase.from('predictions').insert(newPredictions);
+            }
 
-            savePredictions();
-            saveDrsUsed();
+            if (drsUsed.length > 0) {
+                await supabase.from('drs_used').insert(drsUsed.filter(d => updatedPredictions.some(u => u.match_id === d.match_id)));
+            }
+
             error.textContent = '';
             success.textContent = 'Predictions submitted!';
             displayPredict();
@@ -1447,9 +1520,10 @@
         });
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
             console.log('App initialized');
             initializeTabs();
+            await fetchData();
             displayPredict();
             displayPredictions();
             displayLeaderboard();
