@@ -1269,7 +1269,7 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
         }
 
         // Admin user form
-      document.getElementById('adminUserForm').addEventListener('submit', async e => {
+    document.getElementById('adminUserForm').addEventListener('submit', async e => {
     e.preventDefault();
     const userName = document.getElementById('adminNewUserName').value.trim();
     const isAdmin = document.getElementById('isAdmin').checked;
@@ -1287,11 +1287,11 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
     }
 
     try {
-        // Check for existing users with the same name (case-insensitive)
+        // Check for existing users with the same name
         const { data: existingUsers, error: checkError } = await supabase
             .from('users')
             .select('id, name')
-            .eq('name', userName); // Use exact match for simplicity
+            .eq('name', userName);
         if (checkError) {
             console.error('Check error:', checkError);
             throw new Error(`Error checking user name: ${checkError.message}`);
@@ -1322,16 +1322,17 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
             users = users.map(u => (u.id === userId ? { ...u, name: userName, is_admin: isAdmin } : u));
             userSuccess.textContent = `Updated ${userName}${isAdmin ? ' as admin' : ''}!`;
         } else {
-            // Add new user
-            const newUser = { id: generateId(), name: userName, is_admin: isAdmin };
-            const { error: insertError } = await supabase
+            // Add new user (omit id)
+            const newUser = { name: userName, is_admin: isAdmin };
+            const { data, error: insertError } = await supabase
                 .from('users')
-                .insert([newUser]);
+                .insert([newUser])
+                .select(); // Get the inserted row with auto-generated id
             if (insertError) {
                 console.error('Insert error:', insertError);
                 throw new Error(`Failed to add user: ${insertError.message}`);
             }
-            users.push(newUser);
+            users.push(data[0]);
             userSuccess.textContent = `Added ${userName}${isAdmin ? ' as admin' : ''}!`;
         }
 
