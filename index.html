@@ -485,6 +485,21 @@
         margin-top: 10px;
     }
 }
+    #predictToken {
+    text-transform: uppercase;
+}
+#adminUserToken {
+    background: #f8f9fa;
+}
+#generateToken {
+    background: #ffc107;
+    color: #333;
+    width: auto;
+    padding: 8px 16px;
+}
+#generateToken:hover {
+    background: #e0a800;
+}
         
     </style>
 </head>
@@ -687,7 +702,7 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
         let drsUsed = [];
 
         // generate user tokens
-        function generateToken() {
+function generateToken() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let token = '';
     for (let i = 0; i < 6; i++) {
@@ -695,6 +710,11 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
     }
     return token;
 }
+
+document.getElementById('generateToken').addEventListener('click', () => {
+    const tokenInput = document.getElementById('adminUserToken');
+    if (tokenInput) tokenInput.value = generateToken();
+});
         // Fetch data from Supabase
      async function fetchData() {
     try {
@@ -778,93 +798,113 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
         }
 
         // Admin login
-        function checkAdminAccess(tabId) {
-            if (localStorage.getItem('adminLoggedIn') === 'true') {
-                switchTab(tabId);
-                return;
-            }
-            const password = prompt('Enter admin password:');
-            if (password === ADMIN_PASSWORD) {
-                localStorage.setItem('adminLoggedIn', 'true');
-                switchTab(tabId);
-            } else {
-                alert('Incorrect password');
-                switchTab('predict');
-            }
+ function checkAdminAccess(tabId) {
+    try {
+        if (localStorage.getItem('adminLoggedIn') === 'true') {
+            switchTab(tabId);
+            return;
         }
+        const password = prompt('Enter admin password:');
+        if (password === ADMIN_PASSWORD) {
+            localStorage.setItem('adminLoggedIn', 'true');
+            switchTab(tabId);
+        } else {
+            alert('Incorrect password');
+            switchTab('predict');
+        }
+    } catch (error) {
+        console.error('Admin access error:', error);
+        switchTab('predict');
+    }
+}
 
         // Switch main tab
-        function switchTab(tabId) {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            const tab = document.querySelector(`.tab[data-tab="${tabId}"]`);
-            const content = document.getElementById(tabId);
-            if (tab && content) {
-                tab.classList.add('active');
-                content.classList.add('active');
-            }
+       function switchTab(tabId) {
+    try {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        const tab = document.querySelector(`.tab[data-tab="${tabId}"]`);
+        const content = document.getElementById(tabId);
+        if (tab && content) {
+            tab.classList.add('active');
+            content.classList.add('active');
             console.log(`Switched to tab: ${tabId}`);
-
             if (tabId === 'predict') displayPredict();
             else if (tabId === 'predictions') displayPredictions();
             else if (tabId === 'leaderboard') displayLeaderboard();
-            else if (tabId === 'admin') {
-                switchSubTab('admin-users');
-            }
+            else if (tabId === 'admin') switchSubTab('admin-users');
+        } else {
+            console.error(`Tab or content not found for ID: ${tabId}`);
+            switchTab('predict'); // Fallback to Predict tab
         }
+    } catch (error) {
+        console.error('Switch tab error:', error);
+    }
+}
 
         // Switch admin sub-tab
-        function switchSubTab(subTabId) {
-            document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
-            document.querySelector(`.sub-tab[data-sub-tab="${subTabId}"]`).classList.add('active');
-            document.getElementById(subTabId).classList.add('active');
+    function switchSubTab(subTabId) {
+    try {
+        document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.sub-tab-content').forEach(c => c.classList.remove('active'));
+        const subTab = document.querySelector(`.sub-tab[data-sub-tab="${subTabId}"]`);
+        const subContent = document.getElementById(subTabId);
+        if (subTab && subContent) {
+            subTab.classList.add('active');
+            subContent.classList.add('active');
             console.log(`Switched to sub-tab: ${subTabId}`);
-
             if (subTabId === 'admin-users') displayAdminUsers();
             else if (subTabId === 'admin-schedule') displayAdminSchedule();
             else if (subTabId === 'admin-results') displayAdminResults();
+        } else {
+            console.error(`Sub-tab or content not found for ID: ${subTabId}`);
+            switchSubTab('admin-users'); // Fallback to Users sub-tab
         }
+    } catch (error) {
+        console.error('Switch sub-tab error:', error);
+    }
+}
 
         // Tab navigation
-        function initializeTabs() {
-            const tabs = document.querySelectorAll('.tab');
-            const subTabs = document.querySelectorAll('.sub-tab');
-            const isAdminLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
+       function initializeTabs() {
+    try {
+        const tabs = document.querySelectorAll('.tab');
+        const subTabs = document.querySelectorAll('.sub-tab');
+        const isAdminLoggedIn = localStorage.getItem('adminLoggedIn') === 'true';
 
-            document.getElementById('adminTab').classList.remove('hidden');
-            switchTab(isAdminLoggedIn ? 'admin' : 'predict');
+        const adminTab = document.getElementById('adminTab');
+        if (adminTab) adminTab.classList.remove('hidden');
+        switchTab(isAdminLoggedIn ? 'admin' : 'predict');
 
-            tabs.forEach(tab => {
-                tab.removeEventListener('click', handleTabClick);
-                tab.addEventListener('click', handleTabClick);
-            });
+        tabs.forEach(tab => {
+            tab.removeEventListener('click', handleTabClick); // Prevent duplicates
+            tab.addEventListener('click', handleTabClick);
+        });
 
-            subTabs.forEach(subTab => {
-                subTab.removeEventListener('click', handleSubTabClick);
-                subTab.addEventListener('click', handleSubTabClick);
-            });
+        subTabs.forEach(subTab => {
+            subTab.removeEventListener('click', handleSubTabClick);
+            subTab.addEventListener('click', handleSubTabClick);
+        });
 
-            function handleTabClick(e) {
-                const tab = e.currentTarget;
-                const tabId = tab.dataset.tab;
-                console.log(`Tab clicked: ${tabId}`);
-
-                if (tabId === 'admin' && localStorage.getItem('adminLoggedIn') !== 'true') {
-                    checkAdminAccess(tabId);
-                    return;
-                }
-
-                switchTab(tabId);
+        function handleTabClick(e) {
+            const tabId = e.currentTarget.dataset.tab;
+            console.log(`Tab clicked: ${tabId}`);
+            if (tabId === 'admin' && localStorage.getItem('adminLoggedIn') !== 'true') {
+                checkAdminAccess(tabId);
+                return;
             }
-
-            function handleSubTabClick(e) {
-                const subTab = e.currentTarget;
-                const subTabId = subTab.dataset.subTab;
-                console.log(`Sub-tab clicked: ${subTabId}`);
-                switchSubTab(subTabId);
-            }
+            switchTab(tabId);
         }
+
+       function handleSubTabClick(e) {
+            const subTabId = e.currentTarget.dataset.subTab;
+            console.log(`Sub-tab clicked: ${subTabId}`);
+            switchSubTab(subTabId);
+        }
+    } catch (error) {
+        console.error('Initialize tabs error:', error);
+    }
+}
 
         // Admin logout
         document.getElementById('logoutAdmin').addEventListener('click', () => {
@@ -959,21 +999,33 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
         }
 
         // Display admin users
-        async function displayAdminUsers() {
-    const userList = document.getElementById('userList');
-    userList.innerHTML = users.map(user => `
-        <div class="user-item">
-            <span>${user.name}${user.is_admin ? ' (Admin)' : ''}${user.token ? `, Token: ${user.token}` : ''}</span>
-            <div class="action-buttons">
-                <button class="edit-button edit-user small-button" data-id="${user.id}">Edit</button>
-                <button class="danger-button delete-user small-button" data-id="${user.id}" ${predictions.some(p => p.user_id === user.id) ? 'disabled' : ''}>Delete</button>
+     async function displayAdminUsers() {
+    try {
+        const userList = document.getElementById('userList');
+        if (!userList) throw new Error('userList element not found');
+        userList.innerHTML = users.map(user => `
+            <div class="user-item">
+                <span>${user.name}${user.is_admin ? ' (Admin)' : ''}${user.token ? `, Token: ${user.token}` : ''}</span>
+                <div class="action-buttons">
+                    <button class="edit-button edit-user small-button" data-id="${user.id}">Edit</button>
+                    <button class="danger-button delete-user small-button" data-id="${user.id}" ${predictions.some(p => p.user_id === user.id) ? 'disabled' : ''}>Delete</button>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
 
-    document.querySelectorAll('.edit-user').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const userId = btn.dataset.id;
+        // Remove existing listeners to prevent duplicates
+        document.querySelectorAll('.edit-user').forEach(btn => {
+            btn.removeEventListener('click', handleEditUser);
+            btn.addEventListener('click', handleEditUser);
+        });
+
+        document.querySelectorAll('.delete-user').forEach(btn => {
+            btn.removeEventListener('click', handleDeleteUser);
+            btn.addEventListener('click', handleDeleteUser);
+        });
+
+        function handleEditUser() {
+            const userId = this.dataset.id;
             const user = users.find(u => u.id === userId);
             if (user) {
                 document.getElementById('userFormTitle').textContent = 'Edit User';
@@ -983,30 +1035,36 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
                 document.getElementById('adminUserForm').dataset.id = userId;
                 document.getElementById('adminUserForm').querySelector('button').textContent = 'Update User';
             }
-        });
-    });
+        }
 
-    document.querySelectorAll('.delete-user').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const userId = btn.dataset.id;
+        function handleDeleteUser() {
+            const userId = this.dataset.id;
             if (confirm(`Delete user "${users.find(u => u.id === userId).name}"?`)) {
                 users = users.filter(u => u.id !== userId);
                 predictions = predictions.filter(p => p.user_id !== userId);
                 drsUsed = drsUsed.filter(d => d.user_id === userId);
-                await Promise.all([
+                Promise.all([
                     supabase.from('users').delete().eq('id', userId),
                     supabase.from('predictions').delete().eq('user_id', userId),
                     supabase.from('drs_used').delete().eq('user_id', userId)
-                ]);
-                displayAdminUsers();
-                displayLeaderboard();
-                populateUserDropdowns();
+                ]).then(() => {
+                    displayAdminUsers();
+                    displayLeaderboard();
+                    populateUserDropdowns();
+                }).catch(err => {
+                    console.error('Delete user error:', err);
+                    document.getElementById('adminUserError').textContent = 'Failed to delete user.';
+                });
             }
-        });
-    });
+        }
 
-    populateUserDropdowns();
+        populateUserDropdowns();
+    } catch (error) {
+        console.error('Display admin users error:', error);
+        document.getElementById('adminUserError').textContent = 'Failed to load users.';
+    }
 }
+        
         // ----- Add Token Generation Button Handler
         document.getElementById('generateToken').addEventListener('click', () => {
     document.getElementById('adminUserToken').value = generateToken();
@@ -1254,16 +1312,27 @@ const teamLogos = {
 };
 
 function displayPredict() {
-    const matchesContainer = document.getElementById('predictMatches');
-    const todaysMatchesContainer = document.getElementById('todaysMatches');
-    const userId = document.getElementById('predictUserId').value;
-    const token = document.getElementById('predictToken').value.trim().toUpperCase();
-    const today = new Date().toLocaleDateString('en-CA');
-    const todayMatches = iplSchedule.filter(m => m.date === today);
+    try {
+        const matchesContainer = document.getElementById('predictMatches');
+        const todaysMatchesContainer = document.getElementById('todaysMatches');
+        const userId = document.getElementById('predictUserId')?.value || '';
+        const token = document.getElementById('predictToken')?.value.trim().toUpperCase() || '';
+        const today = new Date().toLocaleDateString('en-CA');
+        const todayMatches = iplSchedule.filter(m => m.date === today);
 
-    if (todayMatches.length === 0) {
-        todaysMatchesContainer.innerHTML = '<p class="no-matches">No matches scheduled for today.</p>';
-    } else {
+        if (!matchesContainer || !todaysMatchesContainer) {
+            console.error('Predict containers not found');
+            return;
+        }
+
+        if (todayMatches.length === 0) {
+            todaysMatchesContainer.innerHTML = '<p class="no-matches">No matches scheduled for today.</p>';
+            matchesContainer.innerHTML = '<p>No matches scheduled for today.</p>';
+            document.getElementById('submitPredictions').style.display = 'none';
+            clearInterval(window.timerInterval);
+            return;
+        }
+
         todaysMatchesContainer.innerHTML = `
             <h3>Today's Matches</h3>
             <div class="matches-list">
@@ -1286,77 +1355,80 @@ function displayPredict() {
                 `).join('')}
             </div>
         `;
-    }
 
-    if (todayMatches.length === 0 || !userId || !token) {
-        matchesContainer.innerHTML = todayMatches.length === 0 ? '<p>No matches scheduled for today.</p>' : '<p>Please select a user and enter a valid token.</p>';
-        document.getElementById('submitPredictions').style.display = 'none';
-        clearInterval(window.timerInterval);
-        return;
-    }
+        if (!userId || !token) {
+            matchesContainer.innerHTML = '<p>Please select a user and enter a valid token.</p>';
+            document.getElementById('submitPredictions').style.display = 'none';
+            clearInterval(window.timerInterval);
+            return;
+        }
 
-    const user = users.find(u => u.id === userId && u.token === token);
-    if (!user) {
-        matchesContainer.innerHTML = '<p>Invalid token for selected user.</p>';
-        document.getElementById('submitPredictions').style.display = 'none';
-        clearInterval(window.timerInterval);
-        return;
-    }
+        const user = users.find(u => u.id === userId && u.token === token);
+        if (!user) {
+            matchesContainer.innerHTML = '<p>Invalid token for selected user.</p>';
+            document.getElementById('submitPredictions').style.display = 'none';
+            clearInterval(window.timerInterval);
+            return;
+        }
 
-    document.getElementById('submitPredictions').style.display = 'block';
-    matchesContainer.innerHTML = todayMatches.map(match => {
-        const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
-        const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
-        const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
-        const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
-        const isExpired = !deadline || new Date().getTime() >= deadline;
-        const localDeadline = match.deadline ? new Date(match.deadline).toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, dateStyle: 'short', timeStyle: 'short' }) : 'No deadline';
+        document.getElementById('submitPredictions').style.display = 'block';
+        matchesContainer.innerHTML = todayMatches.map(match => {
+            const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+            const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
+            const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
+            const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
+            const isExpired = !deadline || new Date().getTime() >= deadline;
+            const localDeadline = match.deadline ? new Date(match.deadline).toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, dateStyle: 'short', timeStyle: 'short' }) : 'No deadline';
 
-        return `
-            <div class="match-prediction">
-                <div class="match-details">
-                    <h4>${match.date}: ${match.team1} vs ${match.team2} (${match.time} IST)${match.venue ? `, ${match.venue}` : ''}</h4>
-                    <p>Prediction deadline: ${localDeadline}</p>
-                    ${formatTimer(deadline, match.id)}
-                </div>
-                ${isExpired ? `<p>Prediction closed</p>` : `
-                    <div class="make-prediction">
-                        <h5>Make Prediction</h5>
-                        <div class="radio-group">
-                            <label><input type="radio" name="match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
-                            <label><input type="radio" name="match-${match.id}" value="${match.team2}"> ${match.team2}</label>
-                        </div>
+            return `
+                <div class="match-prediction">
+                    <div class="match-details">
+                        <h4>${match.date}: ${match.team1} vs ${match.team2} (${match.time} IST)${match.venue ? `, ${match.venue}` : ''}</h4>
+                        <p>Prediction deadline: ${localDeadline}</p>
+                        ${formatTimer(deadline, match.id)}
                     </div>
-                    ${hasPredicted ? `
-                        <p class="current-prediction">Current prediction: ${currentPrediction.team}</p>
-                        ${drsWasUsed ? '<p>DRS already used.</p>' : `
-                            <button class="drs-button" data-match-id="${match.id}">Use DRS</button>
-                            <div class="radio-group drs-radio-${match.id}" style="display: none;">
-                                <label><input type="radio" name="drs-match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
-                                <label><input type="radio" name="drs-match-${match.id}" value="${match.team2}"> ${match.team2}</label>
+                    ${isExpired ? `<p>Prediction closed</p>` : `
+                        <div class="make-prediction">
+                            <h5>Make Prediction</h5>
+                            <div class="radio-group">
+                                <label><input type="radio" name="match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
+                                <label><input type="radio" name="match-${match.id}" value="${match.team2}"> ${match.team2}</label>
                             </div>
-                        `}
-                    ` : ''}
-                `}
-            </div>
-        `;
-    }).join('');
+                        </div>
+                        ${hasPredicted ? `
+                            <p class="current-prediction">Current prediction: ${currentPrediction.team}</p>
+                            ${drsWasUsed ? '<p>DRS already used.</p>' : `
+                                <button class="drs-button" data-match-id="${match.id}">Use DRS</button>
+                                <div class="radio-group drs-radio-${match.id}" style="display: none;">
+                                    <label><input type="radio" name="drs-match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
+                                    <label><input type="radio" name="drs-match-${match.id}" value="${match.team2}"> ${match.team2}</label>
+                                </div>
+                            `}
+                        ` : ''}
+                    `}
+                </div>
+            `;
+        }).join('');
 
-    document.querySelectorAll('.drs-button').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const matchId = btn.dataset.matchId;
-            console.log(`DRS clicked for match: ${matchId}`);
-            btn.style.display = 'none';
-            document.querySelector(`.drs-radio-${matchId}`).style.display = 'flex';
+        // Reattach DRS listeners
+        document.querySelectorAll('.drs-button').forEach(btn => {
+            btn.removeEventListener('click', handleDrsClick);
+            btn.addEventListener('click', handleDrsClick);
         });
-    });
 
-    clearInterval(window.timerInterval);
-    window.timerInterval = setInterval(updateTimers, 1000);
-}
+        function handleDrsClick() {
+            const matchId = this.dataset.matchId;
+            console.log(`DRS clicked for match: ${matchId}`);
+            this.style.display = 'none';
+            document.querySelector(`.drs-radio-${matchId}`).style.display = 'flex';
+        }
 
-    clearInterval(window.timerInterval);
-    window.timerInterval = setInterval(updateTimers, 1000);
+        clearInterval(window.timerInterval);
+        window.timerInterval = setInterval(updateTimers, 1000);
+    } catch (error) {
+        console.error('Display predict error:', error);
+        document.getElementById('predictError').textContent = 'Failed to load predictions.';
+    }
 }
 
         // Display predictions tab with pie chart
@@ -1622,27 +1694,32 @@ function displayPredictions() {
         // Admin user form
    document.getElementById('adminUserForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const userName = document.getElementById('adminNewUserName').value.trim();
-    const token = document.getElementById('adminUserToken').value.trim().toUpperCase();
-    const isAdmin = document.getElementById('isAdmin').checked;
+    const userName = document.getElementById('adminNewUserName')?.value.trim() || '';
+    const token = document.getElementById('adminUserToken')?.value.trim().toUpperCase() || '';
+    const isAdmin = document.getElementById('isAdmin')?.checked || false;
     const userError = document.getElementById('adminUserError');
     const userSuccess = document.getElementById('adminUserSuccess');
     const form = e.target;
     const userId = form.dataset.id;
 
+    if (!userError || !userSuccess) {
+        console.error('Admin user form elements not found');
+        return;
+    }
+
+    userError.textContent = '';
+    userSuccess.textContent = '';
+
     if (!userName) {
         userError.textContent = 'User name is required.';
-        userSuccess.textContent = '';
         return;
     }
     if (!token) {
         userError.textContent = 'Token is required.';
-        userSuccess.textContent = '';
         return;
     }
     if (!/^[A-Z0-9]{6}$/.test(token)) {
         userError.textContent = 'Token must be 6 alphanumeric characters.';
-        userSuccess.textContent = '';
         return;
     }
 
@@ -1654,12 +1731,10 @@ function displayPredictions() {
         const tokenTaken = existingUsers.some(u => u.token === token && (!userId || u.id !== userId));
         if (nameTaken) {
             userError.textContent = 'User name already exists.';
-            userSuccess.textContent = '';
             return;
         }
         if (tokenTaken) {
             userError.textContent = 'Token already in use.';
-            userSuccess.textContent = '';
             return;
         }
 
@@ -1677,7 +1752,6 @@ function displayPredictions() {
             userSuccess.textContent = `Added ${userName}${isAdmin ? ' as admin' : ''}!`;
         }
 
-        userError.textContent = '';
         form.reset();
         delete form.dataset.id;
         document.getElementById('userFormTitle').textContent = 'Add User';
@@ -1687,7 +1761,6 @@ function displayPredictions() {
     } catch (error) {
         console.error('Error saving user:', error);
         userError.textContent = error.message || 'Failed to save user.';
-        userSuccess.textContent = '';
     }
 });
 
@@ -1788,96 +1861,97 @@ function displayPredictions() {
         });
 
         // Predict form submission
-       document.getElementById('submitPredictions').addEventListener('click', async () => {
-    const userId = document.getElementById('predictUserId').value;
-    const token = document.getElementById('predictToken').value.trim().toUpperCase();
-    const error = document.getElementById('predictError');
-    const success = document.getElementById('predictSuccess');
-    const today = new Date().toLocaleDateString('en-CA');
-    const todayMatches = iplSchedule.filter(m => m.date === today);
+      document.getElementById('submitPredictions').addEventListener('click', async () => {
+    try {
+        const userId = document.getElementById('predictUserId')?.value || '';
+        const token = document.getElementById('predictToken')?.value.trim().toUpperCase() || '';
+        const error = document.getElementById('predictError');
+        const success = document.getElementById('predictSuccess');
+        const today = new Date().toLocaleDateString('en-CA');
+        const todayMatches = iplSchedule.filter(m => m.date === today);
 
-    error.textContent = '';
-    success.textContent = '';
+        if (!error || !success) throw new Error('Predict form elements not found');
 
-    if (!userId || !token) {
-        error.textContent = 'Please select a user and enter a token.';
-        return;
-    }
+        error.textContent = '';
+        success.textContent = '';
 
-    const user = users.find(u => u.id === userId && u.token === token);
-    if (!user) {
-        error.textContent = 'Invalid token for selected user.';
-        return;
-    }
+        if (!userId || !token) {
+            error.textContent = 'Please select a user and enter a token.';
+            return;
+        }
 
-    const newPredictions = [];
-    for (const match of todayMatches) {
-        const prediction = document.querySelector(`input[name="match-${match.id}"]:checked`);
-        if (prediction) {
-            const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
-            const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
-            if (deadline && new Date().getTime() >= deadline) {
-                error.textContent = `Prediction deadline passed for ${match.team1} vs ${match.team2}.`;
-                return;
+        const user = users.find(u => u.id === userId && u.token === token);
+        if (!user) {
+            error.textContent = 'Invalid token for selected user.';
+            return;
+        }
+
+        const newPredictions = [];
+        for (const match of todayMatches) {
+            const prediction = document.querySelector(`input[name="match-${match.id}"]:checked`);
+            if (prediction) {
+                const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+                const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
+                if (deadline && new Date().getTime() >= deadline) {
+                    error.textContent = `Prediction deadline passed for ${match.team1} vs ${match.team2}.`;
+                    return;
+                }
+                if (!hasPredicted) {
+                    newPredictions.push({
+                        id: generateId(),
+                        user_id: userId,
+                        match_id: match.id,
+                        team: prediction.value,
+                        date: today
+                    });
+                }
             }
-            if (!hasPredicted) {
+
+            const drsPrediction = document.querySelector(`input[name="drs-match-${match.id}"]:checked`);
+            if (drsPrediction) {
+                const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+                const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
+                if (!hasPredicted) {
+                    error.textContent = `No prediction exists for ${match.team1} vs ${match.team2} to use DRS.`;
+                    return;
+                }
+                if (drsWasUsed) {
+                    error.textContent = `DRS already used for ${match.team1} vs ${match.team2}.`;
+                    return;
+                }
+                if (deadline && new Date().getTime() >= deadline) {
+                    error.textContent = `Prediction deadline passed for ${match.team1} vs ${match.team2}.`;
+                    return;
+                }
+                predictions = predictions.filter(p => !(p.user_id === userId && p.match_id === match.id));
                 newPredictions.push({
                     id: generateId(),
                     user_id: userId,
                     match_id: match.id,
-                    team: prediction.value,
+                    team: drsPrediction.value,
                     date: today
                 });
+                drsUsed.push({ id: generateId(), user_id: userId, match_id: match.id });
             }
         }
 
-        const drsPrediction = document.querySelector(`input[name="drs-match-${match.id}"]:checked`);
-        if (drsPrediction) {
-            const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
-            const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
-            if (!hasPredicted) {
-                error.textContent = `No prediction exists for ${match.team1} vs ${match.team2} to use DRS.`;
-                return;
-            }
-            if (drsWasUsed) {
-                error.textContent = `DRS already used for ${match.team1} vs ${match.team2}.`;
-                return;
-            }
-            if (deadline && new Date().getTime() >= deadline) {
-                error.textContent = `Prediction deadline passed for ${match.team1} vs ${match.team2}.`;
-                return;
-            }
-            predictions = predictions.filter(p => !(p.user_id === userId && p.match_id === match.id));
-            newPredictions.push({
-                id: generateId(),
-                user_id: userId,
-                match_id: match.id,
-                team: drsPrediction.value,
-                date: today
-            });
-            drsUsed.push({ id: generateId(), user_id: userId, match_id: match.id });
+        if (newPredictions.length === 0) {
+            error.textContent = 'No new predictions or DRS changes made.';
+            return;
         }
-    }
 
-    if (newPredictions.length === 0) {
-        error.textContent = 'No new predictions or DRS changes made.';
-        return;
-    }
-
-    try {
         predictions.push(...newPredictions);
         await Promise.all([
             supabase.from('predictions').upsert(newPredictions, { onConflict: ['user_id', 'match_id'] }),
             supabase.from('drs_used').upsert(drsUsed, { onConflict: ['user_id', 'match_id'] })
         ]);
         success.textContent = 'Predictions submitted successfully!';
-        error.textContent = '';
         displayPredict();
         displayPredictions();
         displayLeaderboard();
     } catch (err) {
-        error.textContent = 'Failed to submit predictions.';
         console.error('Prediction error:', err);
+        document.getElementById('predictError').textContent = 'Failed to submit predictions.';
     }
 });
 
