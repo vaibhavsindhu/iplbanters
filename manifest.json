@@ -1,0 +1,20 @@
+{
+    "name": "IPLBanters",
+    "short_name": "IPLBanters",
+    "start_url": "./index.html",
+    "display": "standalone",
+    "background_color": "#f4f4f4",
+    "theme_color": "#f4f4f4",
+    "icons": [
+        {
+            "src": "./icon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "./icon.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
