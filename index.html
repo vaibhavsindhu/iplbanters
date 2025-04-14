@@ -244,6 +244,28 @@
                 width: 100%;
             }
         }
+        .match-prediction {
+    margin-bottom: 20px;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
+}
+
+.match-details {
+    background-color: #f5f5f5;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+}
+
+.make-prediction {
+    margin-top: 10px;
+}
+
+.current-prediction {
+    color: #d32f2f;
+    font-weight: bold;
+    margin-top: 10px;
+}
     </style>
 </head>
 <body>
@@ -974,66 +996,72 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
         }
 
         // Display predict tab
-        function displayPredict() {
-            const matchesContainer = document.getElementById('predictMatches');
-            const userId = document.getElementById('predictUserId').value;
-            const today = new Date().toISOString().split('T')[0];
-            const todayMatches = iplSchedule.filter(m => m.date === today);
+      function displayPredict() {
+    const matchesContainer = document.getElementById('predictMatches');
+    const userId = document.getElementById('predictUserId').value;
+    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    const todayMatches = iplSchedule.filter(m => m.date === today);
 
-            if (todayMatches.length === 0 || !userId) {
-                matchesContainer.innerHTML = todayMatches.length === 0 ? '<p>No matches scheduled for today.</p>' : '<p>Please select a user.</p>';
-                document.getElementById('submitPredictions').style.display = 'none';
-                clearInterval(window.timerInterval);
-                return;
-            }
+    if (todayMatches.length === 0 || !userId) {
+        matchesContainer.innerHTML = todayMatches.length === 0 ? '<p>No matches scheduled for today.</p>' : '<p>Please select a user.</p>';
+        document.getElementById('submitPredictions').style.display = 'none';
+        clearInterval(window.timerInterval);
+        return;
+    }
 
-            document.getElementById('submitPredictions').style.display = 'block';
-            matchesContainer.innerHTML = todayMatches.map(match => {
-                const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
-                const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
-                const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
-                const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
-                const isExpired = !deadline || new Date().getTime() >= deadline;
-                const localDeadline = match.deadline ? new Date(match.deadline).toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, dateStyle: 'short', timeStyle: 'short' }) : 'No deadline';
+    document.getElementById('submitPredictions').style.display = 'block';
+    matchesContainer.innerHTML = todayMatches.map(match => {
+        const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+        const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
+        const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
+        const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
+        const isExpired = !deadline || new Date().getTime() >= deadline;
+        const localDeadline = match.deadline ? new Date(match.deadline).toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, dateStyle: 'short', timeStyle: 'short' }) : 'No deadline';
 
-                return `
-                    <div class="match-prediction">
-                        <h4>${match.date}: ${match.team1} vs ${match.team2} (${match.time} IST)${match.venue ? `, ${match.venue}` : ''}</h4>
-                        <p>Prediction deadline: ${localDeadline}</p>
-                        ${formatTimer(deadline, match.id)}
-                        ${isExpired ? `
-                            <p>Prediction closed</p>
-                        ` : hasPredicted ? `
-                            <p>Current prediction: ${currentPrediction.team}</p>
-                            ${drsWasUsed ? '<p>DRS already used.</p>' : `
-                                <button class="drs-button" data-match-id="${match.id}">Use DRS</button>
-                                <div class="radio-group drs-radio-${match.id}" style="display: none;">
-                                    <label><input type="radio" name="drs-match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
-                                    <label><input type="radio" name="drs-match-${match.id}" value="${match.team2}"> ${match.team2}</label>
-                                </div>
-                            `}
-                        ` : `
-                            <div class="radio-group">
-                                <label><input type="radio" name="match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
-                                <label><input type="radio" name="match-${match.id}" value="${match.team2}"> ${match.team2}</label>
+        return `
+            <div class="match-prediction">
+                <div class="match-details">
+                    <h4>${match.date}: ${match.team1} vs ${match.team2} (${match.time} IST)${match.venue ? `, ${match.venue}` : ''}</h4>
+                    <p>Prediction deadline: ${localDeadline}</p>
+                    ${formatTimer(deadline, match.id)}
+                </div>
+                ${isExpired ? `
+                    <p>Prediction closed</p>
+                ` : `
+                    <div class="make-prediction">
+                        <h5>Make Prediction</h5>
+                        <div class="radio-group">
+                            <label><input type="radio" name="match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
+                            <label><input type="radio" name="match-${match.id}" value="${match.team2}"> ${match.team2}</label>
+                        </div>
+                    </div>
+                    ${hasPredicted ? `
+                        <p class="current-prediction">Current prediction: ${currentPrediction.team}</p>
+                        ${drsWasUsed ? '<p>DRS already used.</p>' : `
+                            <button class="drs-button" data-match-id="${match.id}">Use DRS</button>
+                            <div class="radio-group drs-radio-${match.id}" style="display: none;">
+                                <label><input type="radio" name="drs-match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
+                                <label><input type="radio" name="drs-match-${match.id}" value="${match.team2}"> ${match.team2}</label>
                             </div>
                         `}
-                    </div>
-                `;
-            }).join('');
+                    ` : ''}
+                `}
+            </div>
+        `;
+    }).join('');
 
-            document.querySelectorAll('.drs-button').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const matchId = btn.dataset.matchId;
-                    console.log(`DRS clicked for match: ${matchId}`);
-                    btn.style.display = 'none';
-                    document.querySelector(`.drs-radio-${matchId}`).style.display = 'flex';
-                });
-            });
+    document.querySelectorAll('.drs-button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const matchId = btn.dataset.matchId;
+            console.log(`DRS clicked for match: ${matchId}`);
+            btn.style.display = 'none';
+            document.querySelector(`.drs-radio-${matchId}`).style.display = 'flex';
+        });
+    });
 
-            clearInterval(window.timerInterval);
-            window.timerInterval = setInterval(updateTimers, 1000);
-        }
+    clearInterval(window.timerInterval);
+    window.timerInterval = setInterval(updateTimers, 1000);
+}
 
         // Display predictions tab with pie chart
        // Display predictions tab with pie chart
