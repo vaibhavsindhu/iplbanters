@@ -1,8 +1,8 @@
 {
     "rewrites": [
         {
-            "source": "/sw.js",
-            "destination": "/sw.js"
+            "source": "/service-worker.js",
+            "destination": "/service-worker.js"
         },
         {
             "source": "/(.*)",
@@ -11,7 +11,7 @@
     ],
     "headers": [
         {
-            "source": "/sw.js",
+            "source": "/service-worker.js",
             "headers": [
                 {
                     "key": "Service-Worker-Allowed",
