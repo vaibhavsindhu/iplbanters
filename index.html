@@ -507,6 +507,33 @@
 #generateToken:hover {
     background: #e0a800;
 }
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 15px;
+}
+.close-button {
+    background: #6c757d;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+.close-button:hover {
+    background: #5a6268;
+}
+@media (max-width: 600px) {
+    .modal-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .modal-actions button {
+        width: 100%;
+    }
+}
         
     </style>
 </head>
@@ -682,6 +709,9 @@
     </div>
 
     <script>
+
+        // Define validTeams early
+const validTeams = ['CSK', 'MI', 'RCB', 'KKR', 'SRH', 'RR', 'GT', 'DC', 'LSG', 'PBKS'];
       // Initialize Supabase client
 const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNpbnJkeXphenp4Y2hvcWZmbXJrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDQ2MDI0MTMsImV4cCI6MjA2MDE3ODQxM30.5bEroboJkXGr9VTeuuVmMn6yz_SNZc7ZGCN0HmAilIg');
 
@@ -689,6 +719,7 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
 // function generateId() {
 //     return uuid.v4();
 // }
+
         function generateId() {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
         const r = (Math.random() * 16) | 0;
@@ -698,7 +729,7 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
 }
 
         // Valid teams
-        const validTeams = ["CSK", "MI", "RCB", "KKR", "SRH", "RR", "GT", "DC", "LSG", "PBKS"];
+        //const validTeams = ["CSK", "MI", "RCB", "KKR", "SRH", "RR", "GT", "DC", "LSG", "PBKS"];
         const ADMIN_PASSWORD = "Dhoni123";
 
         // Initialize data
@@ -1078,54 +1109,82 @@ document.getElementById('generateToken').addEventListener('click', () => {
 });
         
         // Display admin schedule
-      async function displayAdminSchedule() {
-    const matchList = document.getElementById('matchList');
-    matchList.innerHTML = iplSchedule.map(m => `
-        <div class="match-item">
-            <span>${m.date}: ${m.team1} vs ${m.team2}, ${m.time} IST, ${m.venue ? m.venue : 'No venue'}</span>
-            <div class="action-buttons">
-                <button class="edit-button edit-match small-button" data-id="${m.id}">Edit</button>
-                <button class="danger-button delete-match small-button" data-id="${m.id}">Delete</button>
-            </div>
-        </div>
-    `).join('');
+        async function displayAdminSchedule() {
+    try {
+        const matchList = document.getElementById('matchList');
+        if (!matchList) throw new Error('matchList element not found');
 
-    document.querySelectorAll('.edit-match').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const matchId = btn.dataset.id;
+        matchList.innerHTML = iplSchedule.map(m => `
+            <div class="match-item">
+                <span>${m.date}: ${m.team1} vs ${m.team2}, ${m.time} IST, ${m.venue ? m.venue : 'No venue'}</span>
+                <div class="action-buttons">
+                    <button class="edit-button edit-match small-button" data-id="${m.id}">Edit</button>
+                    <button class="danger-button delete-match small-button" data-id="${m.id}">Delete</button>
+                </div>
+            </div>
+        `).join('');
+
+        // Reattach event listeners
+        document.querySelectorAll('.edit-match').forEach(btn => {
+            btn.removeEventListener('click', handleEditMatch);
+            btn.addEventListener('click', handleEditMatch);
+        });
+
+        document.querySelectorAll('.delete-match').forEach(btn => {
+            btn.removeEventListener('click', handleDeleteMatch);
+            btn.addEventListener('click', handleDeleteMatch);
+        });
+
+        function handleEditMatch() {
+            const matchId = this.dataset.id;
             const match = iplSchedule.find(m => m.id === matchId);
-            if (match) {
+            const modal = document.getElementById('editMatchModal');
+            const form = document.getElementById('editMatchForm');
+            if (match && modal && form) {
                 document.getElementById('editMatchId').value = match.id;
                 document.getElementById('editMatchDate').value = match.date;
                 document.getElementById('editMatchTime').value = match.time;
-                document.getElementById('editMatchTeam1').value = match.team1;
-                document.getElementById('editMatchTeam2').value = match.team2;
+                document.getElementById('editMatchTeam1').value = match.team1 || '';
+                document.getElementById('editMatchTeam2').value = match.team2 || '';
                 document.getElementById('editMatchVenue').value = match.venue || '';
-                document.getElementById('editMatchModal').style.display = 'flex';
+                document.getElementById('editMatchError').textContent = '';
+                document.getElementById('editMatchSuccess').textContent = '';
+                modal.style.display = 'flex';
+                console.log('Modal opened for match:', matchId);
+            } else {
+                console.error('Edit match failed:', { match, modal, form });
+                document.getElementById('matchError').textContent = 'Failed to load match data.';
             }
-        });
-    });
+        }
 
-    document.querySelectorAll('.delete-match').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        async function handleDeleteMatch() {
+            const matchId = this.dataset.id;
             if (confirm('Delete this match?')) {
-                const matchId = btn.dataset.id;
-                iplSchedule = iplSchedule.filter(m => m.id !== matchId);
-                predictions = predictions.filter(p => p.match_id !== matchId);
-                drsUsed = drsUsed.filter(d => d.match_id !== matchId);
-                results = results.filter(r => r.match_id !== matchId);
-                await Promise.all([
-                    supabase.from('ipl_schedule').delete().eq('id', matchId),
-                    supabase.from('predictions').delete().eq('match_id', matchId),
-                    supabase.from('drs_used').delete().eq('match_id', matchId),
-                    supabase.from('results').delete().eq('match_id', matchId)
-                ]);
-                displayAdminSchedule();
-                displayPredict();
-                displayAdminResults();
+                try {
+                    iplSchedule = iplSchedule.filter(m => m.id !== matchId);
+                    predictions = predictions.filter(p => p.match_id !== matchId);
+                    drsUsed = drsUsed.filter(d => d.match_id !== matchId);
+                    results = results.filter(r => r.match_id !== matchId);
+                    await Promise.all([
+                        supabase.from('ipl_schedule').delete().eq('id', matchId),
+                        supabase.from('predictions').delete().eq('match_id', matchId),
+                        supabase.from('drs_used').delete().eq('match_id', matchId),
+                        supabase.from('results').delete().eq('match_id', matchId)
+                    ]);
+                    await displayAdminSchedule();
+                    await displayPredict();
+                    await displayAdminResults();
+                    await displayLeaderboard();
+                } catch (err) {
+                    console.error('Delete match error:', err);
+                    document.getElementById('matchError').textContent = 'Failed to delete match.';
+                }
             }
-        });
-    });
+        }
+    } catch (error) {
+        console.error('Display admin schedule error:', error);
+        document.getElementById('matchError').textContent = 'Failed to load schedule.';
+    }
 }
 
         // Populate match dropdown and update form
@@ -1997,16 +2056,45 @@ function displayPredictions() {
 });
 
         // Initialize
-    document.addEventListener('DOMContentLoaded', async () => {
+       // Initialize
+document.addEventListener('DOMContentLoaded', async () => {
     console.log('App initialized');
     initializeTabs();
     await fetchData();
-    populateUserDropdowns(); // Always populate on load
+    populateUserDropdowns();
     displayPredict();
     displayPredictions();
     displayLeaderboard();
     if (localStorage.getItem('adminLoggedIn') === 'true') {
         switchTab('admin');
+    }
+
+    // Close Edit Match Modal
+    const closeButton = document.getElementById('closeEditMatchModal');
+    if (closeButton) {
+        closeButton.addEventListener('click', () => {
+            const modal = document.getElementById('editMatchModal');
+            const form = document.getElementById('editMatchForm');
+            const error = document.getElementById('editMatchError');
+            const success = document.getElementById('editMatchSuccess');
+            if (modal && form && error && success) {
+                modal.style.display = 'none';
+                form.reset();
+                document.getElementById('editMatchId').value = '';
+                document.getElementById('editMatchDate').value = '';
+                document.getElementById('editMatchTime').value = '';
+                document.getElementById('editMatchTeam1').value = '';
+                document.getElementById('editMatchTeam2').value = '';
+                document.getElementById('editMatchVenue').value = '';
+                error.textContent = '';
+                success.textContent = '';
+                console.log('Modal closed and form reset');
+            } else {
+                console.error('Close modal failed: Elements missing', { modal, form, error, success });
+            }
+        });
+    } else {
+        console.error('Close button not found');
     }
 });
 
@@ -2018,6 +2106,7 @@ function displayPredictions() {
 
         // -----for edit schedule functionality
         // Edit match form submission
+// Edit Match Form Submission
 document.getElementById('editMatchForm').addEventListener('submit', async e => {
     e.preventDefault();
     const matchId = document.getElementById('editMatchId').value;
@@ -2028,8 +2117,10 @@ document.getElementById('editMatchForm').addEventListener('submit', async e => {
     const venue = document.getElementById('editMatchVenue').value.trim();
     const error = document.getElementById('editMatchError');
     const success = document.getElementById('editMatchSuccess');
+    const modal = document.getElementById('editMatchModal');
+    const form = document.getElementById('editMatchForm');
 
-    if (!date || !time || !team1 || !team2 || !venue) {
+    if (!matchId || !date || !time || !team1 || !team2 || !venue) {
         error.textContent = 'All fields are required.';
         success.textContent = '';
         return;
@@ -2063,87 +2154,135 @@ document.getElementById('editMatchForm').addEventListener('submit', async e => {
     const updatedMatch = { id: matchId, date, team1, team2, time, deadline, venue };
 
     try {
-        const { error: updateError } = await supabase.from('ipl_schedule').update(updatedMatch).eq('id', matchId);
-        if (updateError) throw updateError;
-        iplSchedule = iplSchedule.map(m => m.id === matchId ? updatedMatch : m);
+        const { data, error: updateError } = await supabase
+            .from('ipl_schedule')
+            .update({
+                date,
+                team1,
+                team2,
+                time,
+                deadline,
+                venue
+            })
+            .eq('id', matchId)
+            .select()
+            .single();
+        if (updateError) throw new Error(`Supabase update failed: ${updateError.message}`);
+        if (!data) throw new Error('No data returned from update');
+
+        // Update local iplSchedule
+        iplSchedule = iplSchedule.map(m => (m.id === matchId ? updatedMatch : m));
+
         success.textContent = 'Match updated successfully!';
         error.textContent = '';
-        document.getElementById('editMatchModal').style.display = 'none';
-        displayAdminSchedule();
-        displayPredict();
-        displayAdminResults();
+        if (modal && form) {
+            modal.style.display = 'none';
+            form.reset();
+            document.getElementById('editMatchId').value = '';
+            document.getElementById('editMatchDate').value = '';
+            document.getElementById('editMatchTime').value = '';
+            document.getElementById('editMatchTeam1').value = '';
+            document.getElementById('editMatchTeam2').value = '';
+            document.getElementById('editMatchVenue').value = '';
+        }
+
+        // Refresh UI
+        await Promise.all([
+            displayAdminSchedule(),
+            displayPredict(),
+            displayAdminResults(),
+            displayLeaderboard()
+        ]);
+        console.log('Match updated and UI refreshed:', matchId);
     } catch (err) {
-        error.textContent = 'Failed to update match.';
-        success.textContent = '';
         console.error('Update match error:', err);
+        error.textContent = `Failed to update match: ${err.message}`;
+        success.textContent = '';
     }
 });
 
-// Close modal
-document.querySelector('#editMatchModal .close').addEventListener('click', () => {
-    document.getElementById('editMatchModal').style.display = 'none';
-    document.getElementById('editMatchError').textContent = '';
-    document.getElementById('editMatchSuccess').textContent = '';
-});
-
-document.getElementById('cancelEditMatch').addEventListener('click', () => {
-    document.getElementById('editMatchModal').style.display = 'none';
-    document.getElementById('editMatchError').textContent = '';
-    document.getElementById('editMatchSuccess').textContent = '';
-});
+// // Close Edit Match Modal
+// const closeButton = document.getElementById('closeEditMatchModal');
+//     if (closeButton) {
+//         closeButton.addEventListener('click', () => {
+//             const modal = document.getElementById('editMatchModal');
+//             const form = document.getElementById('editMatchForm');
+//             const error = document.getElementById('editMatchError');
+//             const success = document.getElementById('editMatchSuccess');
+//             if (modal && form && error && success) {
+//                 modal.style.display = 'none';
+//                 form.reset();
+//                 document.getElementById('editMatchId').value = '';
+//                 document.getElementById('editMatchDate').value = '';
+//                 document.getElementById('editMatchTime').value = '';
+//                 document.getElementById('editMatchTeam1').value = '';
+//                 document.getElementById('editMatchTeam2').value = '';
+//                 document.getElementById('editMatchVenue').value = '';
+//                 error.textContent = '';
+//                 success.textContent = '';
+//                 console.log('Modal closed and form reset');
+//             } else {
+//                 console.error('Close modal failed: Elements missing', { modal, form, error, success });
+//             }
+//         });
+//     } else {
+//         console.error('Close button not found');
+//     }
+// });
     </script>
 
     <!-- Edit match modal -->
-<div id="editMatchModal" class="modal">
-    <div class="modal-content">
-        <span class="close">×</span>
-        <h3>Edit Match</h3>
-        <form id="editMatchForm">
-            <input type="hidden" id="editMatchId">
-            <label for="editMatchDate">Match Date:</label>
-            <input type="date" id="editMatchDate" required>
-            <label for="editMatchTime">Match Time (IST):</label>
-            <select id="editMatchTime" required>
-                <option value="">Select time</option>
-                <option value="15:30">3:30 PM IST</option>
-                <option value="19:30">7:30 PM IST</option>
-            </select>
-            <label for="editMatchTeam1">Team 1:</label>
-            <select id="editMatchTeam1" required>
-                <option value="">Select Team 1</option>
-                <option value="CSK">CSK</option>
-                <option value="MI">MI</option>
-                <option value="RCB">RCB</option>
-                <option value="KKR">KKR</option>
-                <option value="SRH">SRH</option>
-                <option value="RR">RR</option>
-                <option value="GT">GT</option>
-                <option value="DC">DC</option>
-                <option value="LSG">LSG</option>
-                <option value="PBKS">PBKS</option>
-            </select>
-            <label for="editMatchTeam2">Team 2:</label>
-            <select id="editMatchTeam2" required>
-                <option value="">Select Team 2</option>
-                <option value="CSK">CSK</option>
-                <option value="MI">MI</option>
-                <option value="RCB">RCB</option>
-                <option value="KKR">KKR</option>
-                <option value="SRH">SRH</option>
-                <option value="RR">RR</option>
-                <option value="GT">GT</option>
-                <option value="DC">DC</option>
-                <option value="LSG">LSG</option>
-                <option value="PBKS">PBKS</option>
-            </select>
-            <label for="editMatchVenue">Venue:</label>
-            <input type="text" id="editMatchVenue" placeholder="Enter venue" required>
-            <div id="editMatchError" class="error"></div>
-            <div id="editMatchSuccess" class="success"></div>
-            <button type="submit">Save Changes</button>
-            <button type="button" id="cancelEditMatch">Cancel</button>
-        </form>
+    <div id="editMatchModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h2>Edit Match</h2>
+            <form id="editMatchForm">
+                <input type="hidden" id="editMatchId">
+                <label for="editMatchDate">Date:</label>
+                <input type="date" id="editMatchDate" required>
+                <label for="editMatchTime">Time:</label>
+                <select id="editMatchTime" required>
+                    <option value="">Select time</option>
+                    <option value="15:30">3:30 PM IST</option>
+                    <option value="19:30">7:30 PM IST</option>
+                </select>
+                <label for="editMatchTeam1">Team 1:</label>
+                <select id="editMatchTeam1" required>
+                    <option value="">Select Team 1</option>
+                    <option value="CSK">CSK</option>
+                    <option value="MI">MI</option>
+                    <option value="RCB">RCB</option>
+                    <option value="KKR">KKR</option>
+                    <option value="SRH">SRH</option>
+                    <option value="RR">RR</option>
+                    <option value="GT">GT</option>
+                    <option value="DC">DC</option>
+                    <option value="LSG">LSG</option>
+                    <option value="PBKS">PBKS</option>
+                </select>
+                <label for="editMatchTeam2">Team 2:</label>
+                <select id="editMatchTeam2" required>
+                    <option value="">Select Team 2</option>
+                    <option value="CSK">CSK</option>
+                    <option value="MI">MI</option>
+                    <option value="RCB">RCB</option>
+                    <option value="KKR">KKR</option>
+                    <option value="SRH">SRH</option>
+                    <option value="RR">RR</option>
+                    <option value="GT">GT</option>
+                    <option value="DC">DC</option>
+                    <option value="LSG">LSG</option>
+                    <option value="PBKS">PBKS</option>
+                </select>
+                <label for="editMatchVenue">Venue:</label>
+                <input type="text" id="editMatchVenue" placeholder="Enter venue (e.g., Wankhede Stadium)" required>
+                <div id="editMatchError" class="error"></div>
+                <div id="editMatchSuccess" class="success"></div>
+                <div class="modal-actions">
+                    <button type="submit">Save Match</button>
+                    <button type="button" id="closeEditMatchModal" class="close-button">Close</button>
+                </div>
+            </form>
+        </div>
     </div>
-</div>
 </body>
 </html>
