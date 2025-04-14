@@ -462,17 +462,24 @@
     background: #b71c1c;
 }
 
-        #predictToken {
+     #predictToken {
     text-transform: uppercase;
 }
 #adminUserToken {
-    background: #f8f9fa;
+    text-transform: uppercase;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    width: 100%;
 }
 #generateToken {
     background: #ffc107;
     color: #333;
     width: auto;
     padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
 }
 #generateToken:hover {
     background: #e0a800;
@@ -567,7 +574,7 @@
     <input type="text" id="adminNewUserName" placeholder="Enter user name" required>
     <label for="adminUserToken">User Token:</label>
     <div style="display: flex; gap: 10px;">
-        <input type="text" id="adminUserToken" placeholder="Token (auto-generated)" readonly>
+        <input type="text" id="adminUserToken" placeholder="Enter token (e.g., X7B9P4)" maxlength="6">
         <button type="button" id="generateToken">Generate Token</button>
     </div>
     <label><input type="checkbox" id="isAdmin"> Admin User</label>
@@ -999,7 +1006,7 @@ document.getElementById('generateToken').addEventListener('click', () => {
         }
 
         // Display admin users
-     async function displayAdminUsers() {
+   async function displayAdminUsers() {
     try {
         const userList = document.getElementById('userList');
         if (!userList) throw new Error('userList element not found');
@@ -1724,7 +1731,7 @@ function displayPredictions() {
     }
 
     try {
-        const { data: existingUsers, error: checkError } = await supabase.from('users').select('id, name, token').or(`name.eq.${userName},token.eq.${token}`);
+        const { data: existingUsers, error: checkError } = await supabase.from('users').select('id, name, token');
         if (checkError) throw new Error(`Error checking user: ${checkError.message}`);
 
         const nameTaken = existingUsers.some(u => u.name === userName && (!userId || u.id !== userId));
@@ -1756,8 +1763,10 @@ function displayPredictions() {
         delete form.dataset.id;
         document.getElementById('userFormTitle').textContent = 'Add User';
         document.getElementById('adminUserForm').querySelector('button').textContent = 'Add User';
+        document.getElementById('adminUserToken').value = ''; // Clear token explicitly
         displayAdminUsers();
         displayLeaderboard();
+        populateUserDropdowns();
     } catch (error) {
         console.error('Error saving user:', error);
         userError.textContent = error.message || 'Failed to save user.';
