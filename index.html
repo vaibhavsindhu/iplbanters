@@ -2073,22 +2073,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeButton = document.getElementById('closeEditMatchModal');
     if (closeButton) {
         closeButton.addEventListener('click', () => {
-            const modal = document.getElementById('editMatchModal');
-            const form = document.getElementById('editMatchForm');
-            const error = document.getElementById('editMatchError');
-            const success = document.getElementById('editMatchSuccess');
-            if (modal && form && error && success) {
-                modal.style.display = 'none';
-                form.reset();
-                document.getElementById('editMatchId').value = '';
-                document.getElementById('editMatchDate').value = '';
-                document.getElementById('editMatchTime').value = '';
-                document.getElementById('editMatchTeam1').value = '';
-                document.getElementById('editMatchTeam2').value = '';
-                document.getElementById('editMatchVenue').value = '';
-                error.textContent = '';
-                success.textContent = '';
-                console.log('Modal closed and form reset');
+        const modal = document.getElementById('editMatchModal');
+        const form = document.getElementById('editMatchForm');
+        const error = document.getElementById('editMatchError');
+        const success = document.getElementById('editMatchSuccess');
+        if (modal && form && error && success) {
+            modal.style.display = 'none';
+            form.reset();
+            document.getElementById('editMatchId').value = '';
+            document.getElementById('editMatchDate').value = '';
+            document.getElementById('editMatchTime').value = '';
+            document.getElementById('editMatchTeam1').value = '';
+            document.getElementById('editMatchTeam2').value = '';
+            document.getElementById('editMatchVenue').value = '';
+            error.textContent = '';
+            success.textContent = '';
+            console.log('Modal closed and form reset');
             } else {
                 console.error('Close modal failed: Elements missing', { modal, form, error, success });
             }
@@ -2107,8 +2107,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         // -----for edit schedule functionality
         // Edit match form submission
 // Edit Match Form Submission
+// Edit Match Form Submission
 document.getElementById('editMatchForm').addEventListener('submit', async e => {
     e.preventDefault();
+    console.log('Edit match form submitted');
     const matchId = document.getElementById('editMatchId').value;
     const date = document.getElementById('editMatchDate').value;
     const time = document.getElementById('editMatchTime').value;
@@ -2123,27 +2125,32 @@ document.getElementById('editMatchForm').addEventListener('submit', async e => {
     if (!matchId || !date || !time || !team1 || !team2 || !venue) {
         error.textContent = 'All fields are required.';
         success.textContent = '';
+        console.warn('Validation failed: Missing fields', { matchId, date, time, team1, team2, venue });
         return;
     }
     if (team1 === team2) {
         error.textContent = 'Teams must be different.';
         success.textContent = '';
+        console.warn('Validation failed: Same teams', { team1, team2 });
         return;
     }
     if (!validTeams.includes(team1) || !validTeams.includes(team2)) {
         error.textContent = 'Invalid team selected.';
         success.textContent = '';
+        console.warn('Validation failed: Invalid teams', { team1, team2, validTeams });
         return;
     }
     if (!['15:30', '19:30'].includes(time)) {
         error.textContent = 'Invalid time selected.';
         success.textContent = '';
+        console.warn('Validation failed: Invalid time', { time });
         return;
     }
     const existingMatch = iplSchedule.find(m => m.date === date && m.team1 === team1 && m.team2 === team2 && m.id !== matchId);
     if (existingMatch) {
         error.textContent = 'Match already exists on this date with these teams.';
         success.textContent = '';
+        console.warn('Validation failed: Duplicate match', { date, team1, team2, existingMatch });
         return;
     }
 
@@ -2152,8 +2159,10 @@ document.getElementById('editMatchForm').addEventListener('submit', async e => {
     const deadline = istDateTime.toISOString();
 
     const updatedMatch = { id: matchId, date, team1, team2, time, deadline, venue };
+    console.log('Attempting to update match:', updatedMatch);
 
     try {
+        // Update Supabase
         const { data, error: updateError } = await supabase
             .from('ipl_schedule')
             .update({
@@ -2167,12 +2176,24 @@ document.getElementById('editMatchForm').addEventListener('submit', async e => {
             .eq('id', matchId)
             .select()
             .single();
-        if (updateError) throw new Error(`Supabase update failed: ${updateError.message}`);
-        if (!data) throw new Error('No data returned from update');
+        if (updateError) {
+            console.error('Supabase update error:', updateError);
+            throw new Error(`Supabase update failed: ${updateError.message}`);
+        }
+        if (!data) {
+            console.warn('Supabase returned no data, proceeding with local update');
+        }
+        console.log('Supabase update response:', data);
 
         // Update local iplSchedule
+        const oldSchedule = JSON.stringify(iplSchedule); // Deep copy for logging
         iplSchedule = iplSchedule.map(m => (m.id === matchId ? updatedMatch : m));
+        console.log('Local iplSchedule updated:', {
+            oldSchedule: JSON.parse(oldSchedule),
+            newSchedule: iplSchedule
+        });
 
+        // Close modal
         success.textContent = 'Match updated successfully!';
         error.textContent = '';
         if (modal && form) {
@@ -2184,16 +2205,34 @@ document.getElementById('editMatchForm').addEventListener('submit', async e => {
             document.getElementById('editMatchTeam1').value = '';
             document.getElementById('editMatchTeam2').value = '';
             document.getElementById('editMatchVenue').value = '';
+            console.log('Modal closed and form reset after save');
+        } else {
+            console.warn('Modal or form elements missing', { modal, form });
         }
 
         // Refresh UI
-        await Promise.all([
-            displayAdminSchedule(),
-            displayPredict(),
-            displayAdminResults(),
-            displayLeaderboard()
-        ]);
-        console.log('Match updated and UI refreshed:', matchId);
+        console.log('Starting UI refresh');
+        try {
+            await Promise.all([
+                displayAdminSchedule().then(() => console.log('displayAdminSchedule completed')),
+                displayPredict().then(() => console.log('displayPredict completed')),
+                displayAdminResults().then(() => console.log('displayAdminResults completed')),
+                displayLeaderboard().then(() => console.log('displayLeaderboard completed'))
+            ]);
+            console.log('UI refresh completed successfully');
+        } catch (uiError) {
+            console.error('UI refresh error:', uiError);
+            error.textContent = 'Match updated, but UI refresh failed.';
+            success.textContent = '';
+        }
+
+        // Verify matchList update
+        const matchList = document.getElementById('matchList');
+        if (matchList && matchList.innerHTML.includes(`${date}: ${team1} vs ${team2}`)) {
+            console.log('matchList DOM updated correctly');
+        } else {
+            console.warn('matchList DOM not updated as expected', matchList.innerHTML);
+        }
     } catch (err) {
         console.error('Update match error:', err);
         error.textContent = `Failed to update match: ${err.message}`;
