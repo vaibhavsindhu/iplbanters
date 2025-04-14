@@ -269,7 +269,7 @@
 #todaysMatches {
     margin: 15px 0;
     padding: 20px;
-    background: linear-gradient(135deg, #6b48ff, #00ddeb); /* IPL-inspired gradient */
+    background: linear-gradient(135deg, #6b48ff, #00ddeb); /* IPL gradient */
     border-radius: 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     animation: fadeIn 0.5s ease-in-out;
@@ -295,7 +295,7 @@
     background: #fff;
     border-radius: 10px;
     padding: 15px;
-    width: 300px;
+    width: 320px; /* Slightly wider for logos */
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -309,15 +309,34 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 1.2em;
-    font-weight: 600;
-    color: #333;
     margin-bottom: 10px;
 }
 
+#todaysMatches .match-card .teams .team {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 100px;
+    text-align: center;
+}
+
+#todaysMatches .match-card .teams .team-logo {
+    width: 50px;
+    height: 50px;
+    object-fit: contain;
+    margin-bottom: 5px;
+}
+
+#todaysMatches .match-card .teams .team-name {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #333;
+}
+
 #todaysMatches .match-card .teams .vs {
-    color: #ff4081; /* Vibrant pink for "vs" */
+    color: #ff4081; /* Pink for "vs" */
     font-weight: bold;
+    font-size: 1.2em;
 }
 
 #todaysMatches .match-card .details {
@@ -362,6 +381,15 @@
 
     #todaysMatches .match-card {
         width: 100%;
+    }
+
+    #todaysMatches .match-card .teams .team-logo {
+        width: 40px;
+        height: 40px;
+    }
+
+    #todaysMatches .match-card .teams .team-name {
+        font-size: 0.8em;
     }
 }
     </style>
@@ -1095,7 +1123,21 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
         }
 
         // Display predict tab displayPredict
-      function displayPredict() {
+     // Team logo URLs (replace with actual URLs or Supabase Storage paths)
+const teamLogos = {
+    'CSK': 'https://upload.wikimedia.org/wikipedia/en/thumb/2/2b/Chennai_Super_Kings_Logo.svg/1200px-Chennai_Super_Kings_Logo.svg.png',
+    'MI': 'https://upload.wikimedia.org/wikipedia/en/thumb/c/cd/Mumbai_Indians_Logo.svg/1200px-Mumbai_Indians_Logo.svg.png',
+    'RCB': 'https://upload.wikimedia.org/wikipedia/en/thumb/0/0a/Royal_Challengers_Bangalore_Logo_2022.svg/1200px-Royal_Challengers_Bangalore_Logo_2022.svg.png',
+    'KKR': 'https://upload.wikimedia.org/wikipedia/en/thumb/4/4c/Kolkata_Knight_Riders_Logo.svg/1200px-Kolkata_Knight_Riders_Logo.svg.png',
+    'DC': 'https://upload.wikimedia.org/wikipedia/en/thumb/2/2f/Delhi_Capitals_Logo.svg/1200px-Delhi_Capitals_Logo.svg.png',
+    'PBKS': 'https://upload.wikimedia.org/wikipedia/en/thumb/1/1f/Punjab_Kings_Logo.svg/1200px-Punjab_Kings_Logo.svg.png',
+    'RR': 'https://upload.wikimedia.org/wikipedia/en/thumb/6/60/Rajasthan_Royals_Logo.svg/1200px-Rajasthan_Royals_Logo.svg.png',
+    'SRH': 'https://upload.wikimedia.org/wikipedia/en/thumb/8/81/Sunrisers_Hyderabad.svg/1200px-Sunrisers_Hyderabad.svg.png',
+    'GT': 'https://upload.wikimedia.org/wikipedia/en/thumb/e/ef/Gujarat_Titans_Logo.svg/1200px-Gujarat_Titans_Logo.svg.png',
+    'LSG': 'https://upload.wikimedia.org/wikipedia/en/thumb/9/9f/Lucknow_Super_Giants_IPL_Logo.svg/1200px-Lucknow_Super_Giants_IPL_Logo.svg.png'
+};
+
+function displayPredict() {
     const matchesContainer = document.getElementById('predictMatches');
     const todaysMatchesContainer = document.getElementById('todaysMatches');
     const userId = document.getElementById('predictUserId').value;
@@ -1112,9 +1154,19 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
                 ${todayMatches.map(match => `
                     <div class="match-card">
                         <div class="teams">
-                            <span>${match.team1}</span>
+                            <div class="team">
+                                ${teamLogos[match.team1] ? `
+                                    <img src="${teamLogos[match.team1]}" alt="${match.team1}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';">
+                                    <span class="team-name" style="display: none;">${match.team1}</span>
+                                ` : `<span class="team-name">${match.team1}</span>`}
+                            </div>
                             <span class="vs">vs</span>
-                            <span>${match.team2}</span>
+                            <div class="team">
+                                ${teamLogos[match.team2] ? `
+                                    <img src="${teamLogos[match.team2]}" alt="${match.team2}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';">
+                                    <span class="team-name" style="display: none;">${match.team2}</span>
+                                ` : `<span class="team-name">${match.team2}</span>`}
+                            </div>
                         </div>
                         <div class="details">
                             <span class="time">${match.time} IST</span>
