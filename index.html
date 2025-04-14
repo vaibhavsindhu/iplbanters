@@ -266,6 +266,35 @@
     font-weight: bold;
     margin-top: 10px;
 }
+ #todaysMatches {
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #e8f0fe; /* Light blue for emphasis */
+    border-radius: 5px;
+    text-align: center;
+}
+
+#todaysMatches h3 {
+    margin: 0 0 10px 0;
+    font-size: 1.3em;
+    color: #1a237e; /* Dark blue */
+}
+
+#todaysMatches ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+#todaysMatches li {
+    padding: 5px 0;
+    font-size: 1em;
+}
+
+#todaysMatches p {
+    margin: 0;
+    color: #555;
+}
     </style>
 </head>
 <body>
@@ -278,25 +307,20 @@
         <div class="tab" data-tab="admin" id="adminTab">Admin</div>
     </div>
 
-    <div class="tab-content active" id="predict">
-        <h2>Predict</h2>
+  <div class="tab-content active" id="predict">
     <div id="todaysMatches"></div> <!-- New section for today's matches -->
-    <select id="predictUserId"></select>
-    <div id="predictMatches"></div>
-    <div id="predictError" class="error"></div>
-    <button id="submitPredictions" style="display: none;">Submit Predictions</button>
-        <div class="form-container">
-            <h2>Make Predictions</h2>
-            <label for="predictUserId">Select User:</label>
-            <select id="predictUserId" required>
-                <option value="">Select a user</option>
-            </select>
-            <div id="predictMatches"></div>
-            <div id="predictError" class="error"></div>
-            <div id="predictSuccess" class="success"></div>
-            <button id="submitPredictions" type="button">Submit Predictions</button>
-        </div>
+    <div class="form-container">
+        <h2>Make Predictions</h2>
+        <label for="predictUserId">Select User:</label>
+        <select id="predictUserId" required>
+            <option value="">Select a user</option>
+        </select>
+        <div id="predictMatches"></div>
+        <div id="predictError" class="error"></div>
+        <div id="predictSuccess" class="success"></div>
+        <button id="submitPredictions" type="button">Submit Predictions</button>
     </div>
+</div>
 
     <div class="tab-content" id="predictions">
         <div class="predictions">
@@ -1001,13 +1025,29 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
             });
         }
 
-        // Display predict tab
-      function displayPredict() {
+        // Display predict tab displayPredict
+        function displayPredict() {
     const matchesContainer = document.getElementById('predictMatches');
+    const todaysMatchesContainer = document.getElementById('todaysMatches');
     const userId = document.getElementById('predictUserId').value;
     const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
     const todayMatches = iplSchedule.filter(m => m.date === today);
 
+    // Populate today's matches section
+    if (todayMatches.length === 0) {
+        todaysMatchesContainer.innerHTML = '<p>No matches scheduled for today.</p>';
+    } else {
+        todaysMatchesContainer.innerHTML = `
+            <h3>Today's Matches</h3>
+            <ul>
+                ${todayMatches.map(match => `
+                    <li>${match.team1} vs ${match.team2}, ${match.time} IST${match.venue ? `, ${match.venue}` : ''}</li>
+                `).join('')}
+            </ul>
+        `;
+    }
+
+    // Existing prediction logic
     if (todayMatches.length === 0 || !userId) {
         matchesContainer.innerHTML = todayMatches.length === 0 ? '<p>No matches scheduled for today.</p>' : '<p>Please select a user.</p>';
         document.getElementById('submitPredictions').style.display = 'none';
