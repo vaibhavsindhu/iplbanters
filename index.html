@@ -461,6 +461,30 @@
 #editMatchForm #cancelEditMatch:hover {
     background: #b71c1c;
 }
+
+        #predictToken {
+    text-transform: uppercase;
+}
+#adminUserToken {
+    background: #f8f9fa;
+}
+#generateToken {
+    background: #ffc107;
+    color: #333;
+    width: auto;
+    padding: 8px 16px;
+}
+#generateToken:hover {
+    background: #e0a800;
+}
+@media (max-width: 600px) {
+    #adminUserToken, #generateToken {
+        width: 100%;
+    }
+    #adminUserToken + #generateToken {
+        margin-top: 10px;
+    }
+}
         
     </style>
 </head>
@@ -476,17 +500,19 @@
 
 <div class="tab-content active" id="predict">
     <div id="todaysMatches"></div>
-    <div class="form-container">
-        <h2>Make Predictions</h2>
-        <label for="predictUserId">Select User:</label>
-        <select id="predictUserId" required>
-            <option value="">Select a user</option>
-        </select>
-        <div id="predictMatches"></div>
-        <div id="predictError" class="error"></div>
-        <div id="predictSuccess" class="success"></div>
-        <button id="submitPredictions" type="button">Submit Predictions</button>
-    </div>
+  <div class="form-container">
+    <h2>Make Predictions</h2>
+    <label for="predictUserId">Select User:</label>
+    <select id="predictUserId" required>
+        <option value="">Select a user</option>
+    </select>
+    <label for="predictToken">User Token:</label>
+    <input type="text" id="predictToken" placeholder="Enter your token (e.g., X7B9P4)" required>
+    <div id="predictError" class="error"></div>
+    <div id="predictSuccess" class="success"></div>
+    <div id="predictMatches"></div>
+    <button id="submitPredictions" type="button">Submit Predictions</button>
+</div>
 </div>
 
     <div class="tab-content" id="predictions">
@@ -521,14 +547,19 @@
             <div class="sub-tab-content active" id="admin-users">
                 <div class="user-container">
                     <h3 id="userFormTitle">Add User</h3>
-                    <form id="adminUserForm">
-                        <label for="adminNewUserName">User Name:</label>
-                        <input type="text" id="adminNewUserName" placeholder="Enter user name" required>
-                        <label><input type="checkbox" id="isAdmin"> Admin User</label>
-                        <div id="adminUserError" class="error"></div>
-                        <div id="adminUserSuccess" class="success"></div>
-                        <button type="submit">Add User</button>
-                    </form>
+                   <form id="adminUserForm">
+    <label for="adminNewUserName">User Name:</label>
+    <input type="text" id="adminNewUserName" placeholder="Enter user name" required>
+    <label for="adminUserToken">User Token:</label>
+    <div style="display: flex; gap: 10px;">
+        <input type="text" id="adminUserToken" placeholder="Token (auto-generated)" readonly>
+        <button type="button" id="generateToken">Generate Token</button>
+    </div>
+    <label><input type="checkbox" id="isAdmin"> Admin User</label>
+    <div id="adminUserError" class="error"></div>
+    <div id="adminUserSuccess" class="success"></div>
+    <button type="submit">Add User</button>
+</form>
                     <div class="users-list">
                         <h3>Registered Users</h3>
                         <div id="userList"></div>
@@ -655,43 +686,36 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
         let iplSchedule = [];
         let drsUsed = [];
 
+        // generate user tokens
+        function generateToken() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let token = '';
+    for (let i = 0; i < 6; i++) {
+        token += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return token;
+}
         // Fetch data from Supabase
-       async function fetchData() {
+     async function fetchData() {
     try {
-        const { data: usersData, error: usersError } = await supabase.from('users').select('*');
-        if (usersError) {
-            console.error('Users fetch error:', usersError);
-            throw new Error(`Failed to fetch users: ${usersError.message}`);
-        }
+        const { data: usersData, error: usersError } = await supabase.from('users').select('id, name, is_admin, token');
+        if (usersError) throw new Error(`Failed to fetch users: ${usersError.message}`);
         users = usersData || [];
-        console.log('Fetched users:', users);
 
         const { data: predictionsData, error: predictionsError } = await supabase.from('predictions').select('*');
-        if (predictionsError) {
-            console.error('Predictions fetch error:', predictionsError);
-            throw new Error(`Failed to fetch predictions: ${predictionsError.message}`);
-        }
+        if (predictionsError) throw new Error(`Failed to fetch predictions: ${predictionsError.message}`);
         predictions = predictionsData || [];
 
         const { data: resultsData, error: resultsError } = await supabase.from('results').select('*');
-        if (resultsError) {
-            console.error('Results fetch error:', resultsError);
-            throw new Error(`Failed to fetch results: ${resultsError.message}`);
-        }
+        if (resultsError) throw new Error(`Failed to fetch results: ${resultsError.message}`);
         results = resultsData || [];
 
         const { data: scheduleData, error: scheduleError } = await supabase.from('ipl_schedule').select('*');
-        if (scheduleError) {
-            console.error('Schedule fetch error:', scheduleError);
-            throw new Error(`Failed to fetch schedule: ${scheduleError.message}`);
-        }
+        if (scheduleError) throw new Error(`Failed to fetch schedule: ${scheduleError.message}`);
         iplSchedule = scheduleData || [];
 
         const { data: drsData, error: drsError } = await supabase.from('drs_used').select('*');
-        if (drsError) {
-            console.error('DRS fetch error:', drsError);
-            throw new Error(`Failed to fetch DRS data: ${drsError.message}`);
-        }
+        if (drsError) throw new Error(`Failed to fetch DRS data: ${drsError.message}`);
         drsUsed = drsData || [];
 
         console.log('Fetched data:', { users, predictions, results, iplSchedule, drsUsed });
@@ -702,16 +726,16 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
 }
 
         // Save data to Supabase
-        async function saveUsers() {
-            try {
-                const { error } = await supabase.from('users').upsert(users, { onConflict: 'id' });
-                if (error) throw error;
-                console.log('Saved users to Supabase:', users);
-            } catch (error) {
-                console.error('Failed to save users:', error);
-                document.getElementById('adminUserError').textContent = 'Failed to save users to database.';
-            }
-        }
+    async function saveUsers() {
+    try {
+        const { error } = await supabase.from('users').upsert(users, { onConflict: 'id' });
+        if (error) throw error;
+        console.log('Saved users:', users);
+    } catch (error) {
+        console.error('Failed to save users:', error);
+        document.getElementById('adminUserError').textContent = 'Failed to save users.';
+    }
+}
 
         async function savePredictions() {
             try {
@@ -936,55 +960,58 @@ const supabase = window.supabase.createClient('https://cinrdyzazzxchoqffmrk.supa
 
         // Display admin users
         async function displayAdminUsers() {
-            const userList = document.getElementById('userList');
-            userList.innerHTML = users.map(user => `
-                <div class="user-item">
-                    <span>${user.name}${user.is_admin ? ' (Admin)' : ''}</span>
-                    <div class="action-buttons">
-                        <button class="edit-button edit-user small-button" data-id="${user.id}">Edit</button>
-                        <button class="danger-button delete-user small-button" data-id="${user.id}" ${predictions.some(p => p.user_id === user.id) ? 'disabled' : ''}>Delete</button>
-                    </div>
-                </div>
-            `).join('');
+    const userList = document.getElementById('userList');
+    userList.innerHTML = users.map(user => `
+        <div class="user-item">
+            <span>${user.name}${user.is_admin ? ' (Admin)' : ''}${user.token ? `, Token: ${user.token}` : ''}</span>
+            <div class="action-buttons">
+                <button class="edit-button edit-user small-button" data-id="${user.id}">Edit</button>
+                <button class="danger-button delete-user small-button" data-id="${user.id}" ${predictions.some(p => p.user_id === user.id) ? 'disabled' : ''}>Delete</button>
+            </div>
+        </div>
+    `).join('');
 
-            // Edit user
-            document.querySelectorAll('.edit-user').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const userId = btn.dataset.id;
-                    const user = users.find(u => u.id === userId);
-                    if (user) {
-                        document.getElementById('userFormTitle').textContent = 'Edit User';
-                        document.getElementById('adminNewUserName').value = user.name;
-                        document.getElementById('isAdmin').checked = user.is_admin;
-                        document.getElementById('adminUserForm').dataset.id = userId;
-                        document.getElementById('adminUserForm').querySelector('button').textContent = 'Update User';
-                    }
-                });
-            });
+    document.querySelectorAll('.edit-user').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const userId = btn.dataset.id;
+            const user = users.find(u => u.id === userId);
+            if (user) {
+                document.getElementById('userFormTitle').textContent = 'Edit User';
+                document.getElementById('adminNewUserName').value = user.name;
+                document.getElementById('adminUserToken').value = user.token || '';
+                document.getElementById('isAdmin').checked = user.is_admin;
+                document.getElementById('adminUserForm').dataset.id = userId;
+                document.getElementById('adminUserForm').querySelector('button').textContent = 'Update User';
+            }
+        });
+    });
 
-            // Delete user
-            document.querySelectorAll('.delete-user').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    const userId = btn.dataset.id;
-                    if (confirm(`Delete user "${users.find(u => u.id === userId).name}"?`)) {
-                        users = users.filter(u => u.id !== userId);
-                        predictions = predictions.filter(p => p.user_id !== userId);
-                        drsUsed = drsUsed.filter(d => d.user_id !== userId);
-                        await Promise.all([
-                            supabase.from('users').delete().eq('id', userId),
-                            supabase.from('predictions').delete().eq('user_id', userId),
-                            supabase.from('drs_used').delete().eq('user_id', userId)
-                        ]);
-                        displayAdminUsers();
-                        displayLeaderboard();
-                        populateUserDropdowns();
-                    }
-                });
-            });
+    document.querySelectorAll('.delete-user').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const userId = btn.dataset.id;
+            if (confirm(`Delete user "${users.find(u => u.id === userId).name}"?`)) {
+                users = users.filter(u => u.id !== userId);
+                predictions = predictions.filter(p => p.user_id !== userId);
+                drsUsed = drsUsed.filter(d => d.user_id === userId);
+                await Promise.all([
+                    supabase.from('users').delete().eq('id', userId),
+                    supabase.from('predictions').delete().eq('user_id', userId),
+                    supabase.from('drs_used').delete().eq('user_id', userId)
+                ]);
+                displayAdminUsers();
+                displayLeaderboard();
+                populateUserDropdowns();
+            }
+        });
+    });
 
-            populateUserDropdowns();
-        }
-
+    populateUserDropdowns();
+}
+        // ----- Add Token Generation Button Handler
+        document.getElementById('generateToken').addEventListener('click', () => {
+    document.getElementById('adminUserToken').value = generateToken();
+});
+        
         // Display admin schedule
       async function displayAdminSchedule() {
     const matchList = document.getElementById('matchList');
@@ -1230,10 +1257,10 @@ function displayPredict() {
     const matchesContainer = document.getElementById('predictMatches');
     const todaysMatchesContainer = document.getElementById('todaysMatches');
     const userId = document.getElementById('predictUserId').value;
-    const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
+    const token = document.getElementById('predictToken').value.trim().toUpperCase();
+    const today = new Date().toLocaleDateString('en-CA');
     const todayMatches = iplSchedule.filter(m => m.date === today);
 
-    // Populate today's matches section
     if (todayMatches.length === 0) {
         todaysMatchesContainer.innerHTML = '<p class="no-matches">No matches scheduled for today.</p>';
     } else {
@@ -1244,17 +1271,11 @@ function displayPredict() {
                     <div class="match-card">
                         <div class="teams">
                             <div class="team">
-                                ${teamLogos[match.team1] ? `
-                                    <img src="${teamLogos[match.team1]}" alt="${match.team1}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';">
-                                    <span class="team-name" style="display: none;">${match.team1}</span>
-                                ` : `<span class="team-name">${match.team1}</span>`}
+                                ${teamLogos[match.team1] ? `<img src="${teamLogos[match.team1]}" alt="${match.team1}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team1}</span>` : `<span class="team-name">${match.team1}</span>`}
                             </div>
                             <span class="vs">vs</span>
                             <div class="team">
-                                ${teamLogos[match.team2] ? `
-                                    <img src="${teamLogos[match.team2]}" alt="${match.team2}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';">
-                                    <span class="team-name" style="display: none;">${match.team2}</span>
-                                ` : `<span class="team-name">${match.team2}</span>`}
+                                ${teamLogos[match.team2] ? `<img src="${teamLogos[match.team2]}" alt="${match.team2}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team2}</span>` : `<span class="team-name">${match.team2}</span>`}
                             </div>
                         </div>
                         <div class="details">
@@ -1267,9 +1288,16 @@ function displayPredict() {
         `;
     }
 
-    // Existing prediction logic
-    if (todayMatches.length === 0 || !userId) {
-        matchesContainer.innerHTML = todayMatches.length === 0 ? '<p>No matches scheduled for today.</p>' : '<p>Please select a user.</p>';
+    if (todayMatches.length === 0 || !userId || !token) {
+        matchesContainer.innerHTML = todayMatches.length === 0 ? '<p>No matches scheduled for today.</p>' : '<p>Please select a user and enter a valid token.</p>';
+        document.getElementById('submitPredictions').style.display = 'none';
+        clearInterval(window.timerInterval);
+        return;
+    }
+
+    const user = users.find(u => u.id === userId && u.token === token);
+    if (!user) {
+        matchesContainer.innerHTML = '<p>Invalid token for selected user.</p>';
         document.getElementById('submitPredictions').style.display = 'none';
         clearInterval(window.timerInterval);
         return;
@@ -1291,9 +1319,7 @@ function displayPredict() {
                     <p>Prediction deadline: ${localDeadline}</p>
                     ${formatTimer(deadline, match.id)}
                 </div>
-                ${isExpired ? `
-                    <p>Prediction closed</p>
-                ` : `
+                ${isExpired ? `<p>Prediction closed</p>` : `
                     <div class="make-prediction">
                         <h5>Make Prediction</h5>
                         <div class="radio-group">
@@ -1324,6 +1350,10 @@ function displayPredict() {
             document.querySelector(`.drs-radio-${matchId}`).style.display = 'flex';
         });
     });
+
+    clearInterval(window.timerInterval);
+    window.timerInterval = setInterval(updateTimers, 1000);
+}
 
     clearInterval(window.timerInterval);
     window.timerInterval = setInterval(updateTimers, 1000);
@@ -1590,69 +1620,59 @@ function displayPredictions() {
         }
 
         // Admin user form
-    document.getElementById('adminUserForm').addEventListener('submit', async e => {
+   document.getElementById('adminUserForm').addEventListener('submit', async e => {
     e.preventDefault();
     const userName = document.getElementById('adminNewUserName').value.trim();
+    const token = document.getElementById('adminUserToken').value.trim().toUpperCase();
     const isAdmin = document.getElementById('isAdmin').checked;
     const userError = document.getElementById('adminUserError');
     const userSuccess = document.getElementById('adminUserSuccess');
     const form = e.target;
     const userId = form.dataset.id;
 
-    console.log('Admin user form submitted:', { userName, isAdmin, userId });
-
     if (!userName) {
         userError.textContent = 'User name is required.';
         userSuccess.textContent = '';
         return;
     }
+    if (!token) {
+        userError.textContent = 'Token is required.';
+        userSuccess.textContent = '';
+        return;
+    }
+    if (!/^[A-Z0-9]{6}$/.test(token)) {
+        userError.textContent = 'Token must be 6 alphanumeric characters.';
+        userSuccess.textContent = '';
+        return;
+    }
 
     try {
-        // Check for existing users with the same name
-        const { data: existingUsers, error: checkError } = await supabase
-            .from('users')
-            .select('id, name')
-            .eq('name', userName);
-        if (checkError) {
-            console.error('Check error:', checkError);
-            throw new Error(`Error checking user name: ${checkError.message}`);
-        }
+        const { data: existingUsers, error: checkError } = await supabase.from('users').select('id, name, token').or(`name.eq.${userName},token.eq.${token}`);
+        if (checkError) throw new Error(`Error checking user: ${checkError.message}`);
 
-        if (!userId && existingUsers.length > 0) {
+        const nameTaken = existingUsers.some(u => u.name === userName && (!userId || u.id !== userId));
+        const tokenTaken = existingUsers.some(u => u.token === token && (!userId || u.id !== userId));
+        if (nameTaken) {
             userError.textContent = 'User name already exists.';
             userSuccess.textContent = '';
             return;
         }
-        if (userId && existingUsers.some(u => u.id !== userId)) {
-            userError.textContent = 'User name already taken by another user.';
+        if (tokenTaken) {
+            userError.textContent = 'Token already in use.';
             userSuccess.textContent = '';
             return;
         }
 
         if (userId) {
-            // Update existing user
-            const updatedUser = { name: userName, is_admin: isAdmin };
-            const { error: updateError } = await supabase
-                .from('users')
-                .update(updatedUser)
-                .eq('id', userId);
-            if (updateError) {
-                console.error('Update error:', updateError);
-                throw new Error(`Failed to update user: ${updateError.message}`);
-            }
-            users = users.map(u => (u.id === userId ? { ...u, name: userName, is_admin: isAdmin } : u));
+            const updatedUser = { name: userName, is_admin: isAdmin, token };
+            const { error: updateError } = await supabase.from('users').update(updatedUser).eq('id', userId);
+            if (updateError) throw new Error(`Failed to update user: ${updateError.message}`);
+            users = users.map(u => u.id === userId ? { ...u, name: userName, is_admin: isAdmin, token } : u);
             userSuccess.textContent = `Updated ${userName}${isAdmin ? ' as admin' : ''}!`;
         } else {
-            // Add new user (omit id)
-            const newUser = { name: userName, is_admin: isAdmin };
-            const { data, error: insertError } = await supabase
-                .from('users')
-                .insert([newUser])
-                .select(); // Get the inserted row with auto-generated id
-            if (insertError) {
-                console.error('Insert error:', insertError);
-                throw new Error(`Failed to add user: ${insertError.message}`);
-            }
+            const newUser = { id: generateId(), name: userName, is_admin: isAdmin, token };
+            const { data, error: insertError } = await supabase.from('users').insert([newUser]).select();
+            if (insertError) throw new Error(`Failed to add user: ${insertError.message}`);
             users.push(data[0]);
             userSuccess.textContent = `Added ${userName}${isAdmin ? ' as admin' : ''}!`;
         }
@@ -1666,7 +1686,7 @@ function displayPredictions() {
         displayLeaderboard();
     } catch (error) {
         console.error('Error saving user:', error);
-        userError.textContent = error.message || 'Failed to save user to database.';
+        userError.textContent = error.message || 'Failed to save user.';
         userSuccess.textContent = '';
     }
 });
@@ -1768,92 +1788,98 @@ function displayPredictions() {
         });
 
         // Predict form submission
-        document.getElementById('submitPredictions').addEventListener('click', async () => {
-            const userId = document.getElementById('predictUserId').value;
-            const error = document.getElementById('predictError');
-            const success = document.getElementById('predictSuccess');
-            const today = new Date().toISOString().split('T')[0];
-            const todayMatches = iplSchedule.filter(m => m.date === today);
+       document.getElementById('submitPredictions').addEventListener('click', async () => {
+    const userId = document.getElementById('predictUserId').value;
+    const token = document.getElementById('predictToken').value.trim().toUpperCase();
+    const error = document.getElementById('predictError');
+    const success = document.getElementById('predictSuccess');
+    const today = new Date().toLocaleDateString('en-CA');
+    const todayMatches = iplSchedule.filter(m => m.date === today);
 
-            console.log('Submit predictions clicked:', { userId });
+    error.textContent = '';
+    success.textContent = '';
 
-            if (!userId) {
-                error.textContent = 'Please select a user.';
-                success.textContent = '';
+    if (!userId || !token) {
+        error.textContent = 'Please select a user and enter a token.';
+        return;
+    }
+
+    const user = users.find(u => u.id === userId && u.token === token);
+    if (!user) {
+        error.textContent = 'Invalid token for selected user.';
+        return;
+    }
+
+    const newPredictions = [];
+    for (const match of todayMatches) {
+        const prediction = document.querySelector(`input[name="match-${match.id}"]:checked`);
+        if (prediction) {
+            const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+            const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
+            if (deadline && new Date().getTime() >= deadline) {
+                error.textContent = `Prediction deadline passed for ${match.team1} vs ${match.team2}.`;
                 return;
             }
+            if (!hasPredicted) {
+                newPredictions.push({
+                    id: generateId(),
+                    user_id: userId,
+                    match_id: match.id,
+                    team: prediction.value,
+                    date: today
+                });
+            }
+        }
 
-            let allValid = true;
-            const newPredictions = [];
-            const updatedPredictions = [];
-
-            todayMatches.forEach(match => {
-                const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
-                const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
-                const isExpired = match.deadline && new Date().getTime() >= new Date(match.deadline).getTime();
-
-                if (isExpired) return;
-
-                if (!hasPredicted) {
-                    const selectedTeam = document.querySelector(`input[name="match-${match.id}"]:checked`);
-                    if (!selectedTeam) {
-                        allValid = false;
-                        return;
-                    }
-                    newPredictions.push({
-                        user_id: userId,
-                        match_id: match.id,
-                        date: match.date,
-                        team: selectedTeam.value
-                    });
-                } else if (!drsWasUsed) {
-                    const drsTeam = document.querySelector(`input[name="drs-match-${match.id}"]:checked`);
-                    if (drsTeam) {
-                        updatedPredictions.push({
-                            user_id: userId,
-                            match_id: match.id,
-                            date: match.date,
-                            team: drsTeam.value
-                        });
-                        drsUsed.push({ user_id: userId, match_id: match.id });
-                    }
-                }
+        const drsPrediction = document.querySelector(`input[name="drs-match-${match.id}"]:checked`);
+        if (drsPrediction) {
+            const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+            const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
+            if (!hasPredicted) {
+                error.textContent = `No prediction exists for ${match.team1} vs ${match.team2} to use DRS.`;
+                return;
+            }
+            if (drsWasUsed) {
+                error.textContent = `DRS already used for ${match.team1} vs ${match.team2}.`;
+                return;
+            }
+            if (deadline && new Date().getTime() >= deadline) {
+                error.textContent = `Prediction deadline passed for ${match.team1} vs ${match.team2}.`;
+                return;
+            }
+            predictions = predictions.filter(p => !(p.user_id === userId && p.match_id === match.id));
+            newPredictions.push({
+                id: generateId(),
+                user_id: userId,
+                match_id: match.id,
+                team: drsPrediction.value,
+                date: today
             });
+            drsUsed.push({ id: generateId(), user_id: userId, match_id: match.id });
+        }
+    }
 
-            if (!allValid) {
-                error.textContent = 'Please select a team for each new match.';
-                success.textContent = '';
-                return;
-            }
+    if (newPredictions.length === 0) {
+        error.textContent = 'No new predictions or DRS changes made.';
+        return;
+    }
 
-            if (newPredictions.length === 0 && updatedPredictions.length === 0) {
-                error.textContent = 'No new or updated predictions to submit.';
-                success.textContent = '';
-                return;
-            }
-
-            if (updatedPredictions.length > 0) {
-                predictions = predictions.map(p =>
-                    updatedPredictions.find(u => u.user_id === p.user_id && u.match_id === p.match_id) || p
-                );
-                await supabase.from('predictions').upsert(updatedPredictions, { onConflict: ['user_id', 'match_id'] });
-            }
-
-            if (newPredictions.length > 0) {
-                predictions.push(...newPredictions);
-                await supabase.from('predictions').insert(newPredictions);
-            }
-
-            if (drsUsed.length > 0) {
-                await supabase.from('drs_used').insert(drsUsed.filter(d => updatedPredictions.some(u => u.match_id === d.match_id)));
-            }
-
-            error.textContent = '';
-            success.textContent = 'Predictions submitted!';
-            displayPredict();
-            displayPredictions();
-            displayLeaderboard();
-        });
+    try {
+        predictions.push(...newPredictions);
+        await Promise.all([
+            supabase.from('predictions').upsert(newPredictions, { onConflict: ['user_id', 'match_id'] }),
+            supabase.from('drs_used').upsert(drsUsed, { onConflict: ['user_id', 'match_id'] })
+        ]);
+        success.textContent = 'Predictions submitted successfully!';
+        error.textContent = '';
+        displayPredict();
+        displayPredictions();
+        displayLeaderboard();
+    } catch (err) {
+        error.textContent = 'Failed to submit predictions.';
+        console.error('Prediction error:', err);
+    }
+});
 
         // Initialize
     document.addEventListener('DOMContentLoaded', async () => {
