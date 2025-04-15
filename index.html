@@ -392,7 +392,23 @@
         font-size: 0.8em;
     }
 }
-
+.team-logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+.team-name {
+    font-size: 1em;
+    color: #333;
+}
+.teams {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
 /* Modal styles for editing matches */
 .modal {
     display: none;
@@ -534,7 +550,14 @@
         width: 100%;
     }
 }
-        
+       
+#predictMatches h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #333;
+    text-align: center;
+}
     </style>
 </head>
 <body>
@@ -1388,150 +1411,6 @@ const teamLogos = {
     'GT': 'https://cinrdyzazzxchoqffmrk.supabase.co/storage/v1/object/sign/teams/GT.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InN0b3JhZ2UtdXJsLXNpZ25pbmcta2V5X2IyZWY4MWFhLWNjYTItNDIxZi05ZGIwLTlkN2RhY2U3NTIyNyJ9.eyJ1cmwiOiJ0ZWFtcy9HVC5qcGciLCJpYXQiOjE3NDQ2NDY3NzUsImV4cCI6MjA2MDAwNjc3NX0.IJ_QfwucdpblgDIwQ5YwLBDamMdL0K_-FtofAFaDxQ4',
     'LSG': 'https://cinrdyzazzxchoqffmrk.supabase.co/storage/v1/object/sign/teams/LSG.jpg?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InN0b3JhZ2UtdXJsLXNpZ25pbmcta2V5X2IyZWY4MWFhLWNjYTItNDIxZi05ZGIwLTlkN2RhY2U3NTIyNyJ9.eyJ1cmwiOiJ0ZWFtcy9MU0cuanBnIiwiaWF0IjoxNzQ0NjQ2ODE4LCJleHAiOjIwNjAwMDY4MTh9.YnOSC8_6f0nN5BjL5p3s0eT_l1BTFbFnoTVMLj_HrCI'
 };
-
-function displayPredict() {
-    try {
-        const matchesContainer = document.getElementById('predictMatches');
-        const todaysMatchesContainer = document.getElementById('todaysMatches');
-        const userId = document.getElementById('predictUserId')?.value || '';
-        const token = document.getElementById('predictToken')?.value.trim().toUpperCase() || '';
-        const submitButton = document.getElementById('submitPredictions');
-        const now = new Date();
-        const today = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
-        const twelveHoursFromNow = new Date(now.getTime() + 12 * 60 * 60 * 1000);
-
-        if (!matchesContainer || !todaysMatchesContainer || !submitButton) {
-            console.error('Predict containers not found');
-            return;
-        }
-
-        // Today’s matches (date = today)
-        const todayMatches = iplSchedule.filter(m => m.date === today);
-
-        // Matches within 12 hours from now
-        const upcomingMatches = iplSchedule.filter(m => {
-            const matchDateTime = new Date(`${m.date}T${m.time}:00+05:30`);
-            return matchDateTime <= twelveHoursFromNow && matchDateTime >= now;
-        });
-
-        // Combine today’s and upcoming matches, remove duplicates
-        const displayMatches = Array.from(
-            new Map([...todayMatches, ...upcomingMatches].map(m => [m.id, m])).values()
-        );
-
-        // Update #todaysMatches (only today’s matches)
-        if (todayMatches.length === 0) {
-            todaysMatchesContainer.innerHTML = '<p class="no-matches">No matches scheduled for today.</p>';
-        } else {
-            todaysMatchesContainer.innerHTML = `
-                <h3>Today's Matches</h3>
-                <div class="matches-list">
-                    ${todayMatches.map(match => `
-                        <div class="match-card">
-                            <div class="teams">
-                                <div class="team">
-                                    ${teamLogos[match.team1] ? `<img src="${teamLogos[match.team1]}" alt="${match.team1}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team1}</span>` : `<span class="team-name">${match.team1}</span>`}
-                                </div>
-                                <span class="vs">vs</span>
-                                <div class="team">
-                                    ${teamLogos[match.team2] ? `<img src="${teamLogos[match.team2]}" alt="${match.team2}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team2}</span>` : `<span class="team-name">${match.team2}</span>`}
-                                </div>
-                            </div>
-                            <div class="details">
-                                <span class="time">${match.time} IST</span>
-                                ${match.venue ? `<span class="venue">, ${match.venue}</span>` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        // Update #predictMatches
-        if (displayMatches.length === 0) {
-            matchesContainer.innerHTML = '<p>No matches scheduled within the next 12 hours.</p>';
-            submitButton.style.display = 'none';
-            clearInterval(window.timerInterval);
-            return;
-        }
-
-        if (!userId || !token) {
-            matchesContainer.innerHTML = '<p>Please select a user and enter a valid token.</p>';
-            submitButton.style.display = 'none';
-            clearInterval(window.timerInterval);
-            return;
-        }
-
-        const user = users.find(u => u.id === userId && u.token === token);
-        if (!user) {
-            matchesContainer.innerHTML = '<p>Invalid token for selected user.</p>';
-            submitButton.style.display = 'none';
-            clearInterval(window.timerInterval);
-            return;
-        }
-
-        submitButton.style.display = 'block';
-        matchesContainer.innerHTML = displayMatches.map(match => {
-            const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
-            const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
-            const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
-            const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
-            const isExpired = !deadline || new Date().getTime() >= deadline;
-            const localDeadline = match.deadline ? new Date(match.deadline).toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, dateStyle: 'short', timeStyle: 'short' }) : 'No deadline';
-
-            return `
-                <div class="match-prediction">
-                    <div class="match-details">
-                        <h4>${match.date}: ${match.team1} vs ${match.team2} (${match.time} IST)${match.venue ? `, ${match.venue}` : ''}</h4>
-                        <p>Prediction deadline: ${localDeadline}</p>
-                        ${formatTimer(deadline, match.id)}
-                    </div>
-                    ${isExpired ? `<p>Prediction closed</p>` : `
-                        <div class="make-prediction">
-                            <h5>Make Prediction</h5>
-                            <div class="radio-group">
-                                <label><input type="radio" name="match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
-                                <label><input type="radio" name="match-${match.id}" value="${match.team2}"> ${match.team2}</label>
-                            </div>
-                        </div>
-                        ${hasPredicted ? `
-                            <p class="current-prediction">Current prediction: ${currentPrediction.team}</p>
-                            ${drsWasUsed ? '<p>DRS already used.</p>' : `
-                                <button class="drs-button" data-match-id="${match.id}">Use DRS</button>
-                                <div class="radio-group drs-radio-${match.id}" style="display: none;">
-                                    <label><input type="radio" name="drs-match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
-                                    <label><input type="radio" name="drs-match-${match.id}" value="${match.team2}"> ${match.team2}</label>
-                                </div>
-                            `}
-                        ` : ''}
-                    `}
-                </div>
-            `;
-        }).join('');
-
-        // Reattach DRS listeners
-        document.querySelectorAll('.drs-button').forEach(btn => {
-            btn.removeEventListener('click', handleDrsClick);
-            btn.addEventListener('click', handleDrsClick);
-        });
-
-        function handleDrsClick() {
-            const matchId = this.dataset.matchId;
-            console.log(`DRS clicked for match: ${matchId}`);
-            this.style.display = 'none';
-            document.querySelector(`.drs-radio-${matchId}`).style.display = 'flex';
-        }
-
-        clearInterval(window.timerInterval);
-        window.timerInterval = setInterval(updateTimers, 1000);
-    } catch (error) {
-        console.error('Display predict error:', error);
-        document.getElementById('predictError').textContent = 'Failed to load predictions.';
-    }
-}
-        // Display predictions tab with pie chart
-       // Display predictions tab with pie chart
-let predictionsPieChartInstance = null;
 function displayPredict() {
     try {
         const matchesContainer = document.getElementById('predictMatches');
@@ -1548,19 +1427,11 @@ function displayPredict() {
             return;
         }
 
+        // Log teamLogos for debugging
+        console.log('teamLogos:', teamLogos);
+
         // Today’s matches (date = today)
         const todayMatches = iplSchedule.filter(m => m.date === today);
-
-        // Matches with deadlines within 23 hours from now
-        const upcomingMatches = iplSchedule.filter(m => {
-            const deadline = m.deadline ? new Date(m.deadline).getTime() : null;
-            return deadline && deadline <= twentyThreeHoursFromNow.getTime() && deadline >= now.getTime();
-        });
-
-        // Combine today’s and upcoming matches, remove duplicates
-        const displayMatches = Array.from(
-            new Map([...todayMatches, ...upcomingMatches].map(m => [m.id, m])).values()
-        );
 
         // Update #todaysMatches (only today’s matches)
         if (todayMatches.length === 0) {
@@ -1569,37 +1440,64 @@ function displayPredict() {
             todaysMatchesContainer.innerHTML = `
                 <h3>Today's Matches</h3>
                 <div class="matches-list">
-                    ${todayMatches.map(match => `
-                        <div class="match-card">
-                            <div class="teams">
-                                <div class="team">
-                                    ${teamLogos[match.team1] ? `<img src="${teamLogos[match.team1]}" alt="${match.team1}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team1}</span>` : `<span class="team-name">${match.team1}</span>`}
+                    ${todayMatches.map(match => {
+                        console.log(`Rendering match: ${match.team1} vs ${match.team2}`, {
+                            team1Logo: teamLogos[match.team1],
+                            team2Logo: teamLogos[match.team2]
+                        });
+                        const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
+                        const isExpired = deadline && now.getTime() >= deadline;
+                        return `
+                            <div class="match-card">
+                                <div class="teams">
+                                    <div class="team">
+                                        ${teamLogos[match.team1] ? `
+                                            <img src="${teamLogos[match.team1]}" alt="${match.team1}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='inline';">
+                                            <span class="team-name" style="display: none;">${match.team1}</span>
+                                        ` : `<span class="team-name">${match.team1}</span>`}
+                                    </div>
+                                    <span class="vs">vs</span>
+                                    <div class="team">
+                                        ${teamLogos[match.team2] ? `
+                                            <img src="${teamLogos[match.team2]}" alt="${match.team2}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='inline';">
+                                            <span class="team-name" style="display: none;">${match.team2}</span>
+                                        ` : `<span class="team-name">${match.team2}</span>`}
+                                    </div>
                                 </div>
-                                <span class="vs">vs</span>
-                                <div class="team">
-                                    ${teamLogos[match.team2] ? `<img src="${teamLogos[match.team2]}" alt="${match.team2}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team2}</span>` : `<span class="team-name">${match.team2}</span>`}
+                                <div class="details">
+                                    <span class="time">${match.time} IST</span>
+                                    ${match.venue ? `<span class="venue">, ${match.venue}</span>` : ''}
                                 </div>
+                                ${isExpired ? `<p style="color: red; text-align: center;">Prediction closed</p>` : ''}
                             </div>
-                            <div class="details">
-                                <span class="time">${match.time} IST</span>
-                                ${match.venue ? `<span class="venue">, ${match.venue}</span>` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             `;
         }
 
-        // Update #predictMatches
-        if (displayMatches.length === 0) {
-            matchesContainer.innerHTML = '<p>No matches with deadlines within the next 23 hours.</p>';
+        // Matches with deadlines within 23 hours from now
+        const upcomingMatches = iplSchedule.filter(m => {
+            const deadline = m.deadline ? new Date(m.deadline).getTime() : null;
+            return deadline && deadline <= twentyThreeHoursFromNow.getTime() && deadline >= now.getTime();
+        });
+
+        // Update #predictMatches (Upcoming Matches)
+        if (upcomingMatches.length === 0) {
+            matchesContainer.innerHTML = `
+                <h3>Upcoming Matches</h3>
+                <p>No matches with deadlines within the next 23 hours.</p>
+            `;
             submitButton.style.display = 'none';
             clearInterval(window.timerInterval);
             return;
         }
 
         if (!userId || !token) {
-            matchesContainer.innerHTML = '<p>Please select a user and enter a valid token.</p>';
+            matchesContainer.innerHTML = `
+                <h3>Upcoming Matches</h3>
+                <p>Please select a user and enter a valid token.</p>
+            `;
             submitButton.style.display = 'none';
             clearInterval(window.timerInterval);
             return;
@@ -1607,50 +1505,56 @@ function displayPredict() {
 
         const user = users.find(u => u.id === userId && u.token === token);
         if (!user) {
-            matchesContainer.innerHTML = '<p>Invalid token for selected user.</p>';
+            matchesContainer.innerHTML = `
+                <h3>Upcoming Matches</h3>
+                <p>Invalid token for selected user.</p>
+            `;
             submitButton.style.display = 'none';
             clearInterval(window.timerInterval);
             return;
         }
 
         submitButton.style.display = 'block';
-        matchesContainer.innerHTML = displayMatches.map(match => {
-            const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
-            const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
-            const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
-            const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
-            const isExpired = !deadline || new Date().getTime() >= deadline;
-            const localDeadline = match.deadline ? new Date(match.deadline).toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, dateStyle: 'short', timeStyle: 'short' }) : 'No deadline';
+        matchesContainer.innerHTML = `
+            <h3>Upcoming Matches</h3>
+            ${upcomingMatches.map(match => {
+                const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+                const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
+                const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
+                const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
+                const isExpired = !deadline || now.getTime() >= deadline;
+                const localDeadline = match.deadline ? new Date(match.deadline).toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, dateStyle: 'short', timeStyle: 'short' }) : 'No deadline';
 
-            return `
-                <div class="match-prediction">
-                    <div class="match-details">
-                        <h4>${match.date}: ${match.team1} vs ${match.team2} (${match.time} IST)${match.venue ? `, ${match.venue}` : ''}</h4>
-                        <p>Prediction deadline: ${localDeadline}</p>
-                        ${formatTimer(deadline, match.id)}
-                    </div>
-                    ${isExpired ? `<p>Prediction closed</p>` : `
-                        <div class="make-prediction">
-                            <h5>Make Prediction</h5>
-                            <div class="radio-group">
-                                <label><input type="radio" name="match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
-                                <label><input type="radio" name="match-${match.id}" value="${match.team2}"> ${match.team2}</label>
-                            </div>
+                return `
+                    <div class="match-prediction">
+                        <div class="match-details">
+                            <h4>${match.date}: ${match.team1} vs ${match.team2} (${match.time} IST)${match.venue ? `, ${match.venue}` : ''}</h4>
+                            <p>Prediction deadline: ${localDeadline}</p>
+                            ${formatTimer(deadline, match.id)}
                         </div>
-                        ${hasPredicted ? `
-                            <p class="current-prediction">Current prediction: ${currentPrediction.team}</p>
-                            ${drsWasUsed ? '<p>DRS already used.</p>' : `
-                                <button class="drs-button" data-match-id="${match.id}">Use DRS</button>
-                                <div class="radio-group drs-radio-${match.id}" style="display: none;">
-                                    <label><input type="radio" name="drs-match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
-                                    <label><input type="radio" name="drs-match-${match.id}" value="${match.team2}"> ${match.team2}</label>
+                        ${isExpired ? `<p>Prediction closed</p>` : `
+                            <div class="make-prediction">
+                                <h5>Make Prediction</h5>
+                                <div class="radio-group">
+                                    <label><input type="radio" name="match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
+                                    <label><input type="radio" name="match-${match.id}" value="${match.team2}"> ${match.team2}</label>
                                 </div>
-                            `}
-                        ` : ''}
-                    `}
-                </div>
-            `;
-        }).join('');
+                            </div>
+                            ${hasPredicted ? `
+                                <p class="current-prediction">Current prediction: ${currentPrediction.team}</p>
+                                ${drsWasUsed ? '<p>DRS already used.</p>' : `
+                                    <button class="drs-button" data-match-id="${match.id}">Use DRS</button>
+                                    <div class="radio-group drs-radio-${match.id}" style="display: none;">
+                                        <label><input type="radio" name="drs-match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
+                                        <label><input type="radio" name="drs-match-${match.id}" value="${match.team2}"> ${match.team2}</label>
+                                    </div>
+                                `}
+                            ` : ''}
+                        `}
+                    </div>
+                `;
+            }).join('')}
+        `;
 
         // Reattach DRS listeners
         document.querySelectorAll('.drs-button').forEach(btn => {
@@ -1672,6 +1576,169 @@ function displayPredict() {
         document.getElementById('predictError').textContent = 'Failed to load predictions.';
     }
 }
+
+// function displayPredict() {
+//     try {
+//         const matchesContainer = document.getElementById('predictMatches');
+//         const todaysMatchesContainer = document.getElementById('todaysMatches');
+//         const userId = document.getElementById('predictUserId')?.value || '';
+//         const token = document.getElementById('predictToken')?.value.trim().toUpperCase() || '';
+//         const submitButton = document.getElementById('submitPredictions');
+//         const now = new Date();
+//         const today = now.toLocaleDateString('en-CA'); // YYYY-MM-DD
+//         const twentyThreeHoursFromNow = new Date(now.getTime() + 23 * 60 * 60 * 1000);
+
+//         if (!matchesContainer || !todaysMatchesContainer || !submitButton) {
+//             console.error('Predict containers not found');
+//             return;
+//         }
+
+//         // Today’s matches (date = today)
+//         const todayMatches = iplSchedule.filter(m => m.date === today);
+
+//         // Update #todaysMatches (only today’s matches)
+//         if (todayMatches.length === 0) {
+//             todaysMatchesContainer.innerHTML = '<p class="no-matches">No matches scheduled for today.</p>';
+//         } else {
+//             todaysMatchesContainer.innerHTML = `
+//                 <h3>Today's Matches</h3>
+//                 <div class="matches-list">
+//                     ${todayMatches.map(match => {
+//                         const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
+//                         const isExpired = deadline && now.getTime() >= deadline;
+//                         if (isExpired) {
+//                             return `
+//                                 <div class="match-card">
+//                                     <p>Prediction closed: ${match.team1} vs ${match.team2}</p>
+//                                 </div>
+//                             `;
+//                         }
+//                         return `
+//                             <div class="match-card">
+//                                 <div class="teams">
+//                                     <div class="team">
+//                                         ${teamLogos[match.team1] ? `<img src="${teamLogos[match.team1]}" alt="${match.team1}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team1}</span>` : `<span class="team-name">${match.team1}</span>`}
+//                                     </div>
+//                                     <span class="vs">vs</span>
+//                                     <div class="team">
+//                                         ${teamLogos[match.team2] ? `<img src="${teamLogos[match.team2]}" alt="${match.team2}" class="team-logo" onerror="this.style.display='none';this.nextSibling.style.display='block';"><span class="team-name" style="display: none;">${match.team2}</span>` : `<span class="team-name">${match.team2}</span>`}
+//                                     </div>
+//                                 </div>
+//                                 <div class="details">
+//                                     <span class="time">${match.time} IST</span>
+//                                     ${match.venue ? `<span class="venue">, ${match.venue}</span>` : ''}
+//                                 </div>
+//                             </div>
+//                         `;
+//                     }).join('')}
+//                 </div>
+//             `;
+//         }
+
+//         // Matches with deadlines within 23 hours from now
+//         const upcomingMatches = iplSchedule.filter(m => {
+//             const deadline = m.deadline ? new Date(m.deadline).getTime() : null;
+//             return deadline && deadline <= twentyThreeHoursFromNow.getTime() && deadline >= now.getTime();
+//         });
+
+//         // Update #predictMatches (Upcoming Matches)
+//         if (upcomingMatches.length === 0) {
+//             matchesContainer.innerHTML = `
+//                 <h3>Upcoming Matches</h3>
+//                 <p>No matches with deadlines within the next 23 hours.</p>
+//             `;
+//             submitButton.style.display = 'none';
+//             clearInterval(window.timerInterval);
+//             return;
+//         }
+
+//         if (!userId || !token) {
+//             matchesContainer.innerHTML = `
+//                 <h3>Upcoming Matches</h3>
+//                 <p>Please select a user and enter a valid token.</p>
+//             `;
+//             submitButton.style.display = 'none';
+//             clearInterval(window.timerInterval);
+//             return;
+//         }
+
+//         const user = users.find(u => u.id === userId && u.token === token);
+//         if (!user) {
+//             matchesContainer.innerHTML = `
+//                 <h3>Upcoming Matches</h3>
+//                 <p>Invalid token for selected user.</p>
+//             `;
+//             submitButton.style.display = 'none';
+//             clearInterval(window.timerInterval);
+//             return;
+//         }
+
+//         submitButton.style.display = 'block';
+//         matchesContainer.innerHTML = `
+//             <h3>Upcoming Matches</h3>
+//             ${upcomingMatches.map(match => {
+//                 const hasPredicted = predictions.some(p => p.user_id === userId && p.match_id === match.id);
+//                 const drsWasUsed = drsUsed.some(d => d.user_id === userId && d.match_id === match.id);
+//                 const currentPrediction = hasPredicted ? predictions.find(p => p.user_id === userId && p.match_id === match.id) : null;
+//                 const deadline = match.deadline ? new Date(match.deadline).getTime() : null;
+//                 const isExpired = !deadline || now.getTime() >= deadline;
+//                 const localDeadline = match.deadline ? new Date(match.deadline).toLocaleString('en-US', { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone, dateStyle: 'short', timeStyle: 'short' }) : 'No deadline';
+
+//                 return `
+//                     <div class="match-prediction">
+//                         <div class="match-details">
+//                             <h4>${match.date}: ${match.team1} vs ${match.team2} (${match.time} IST)${match.venue ? `, ${match.venue}` : ''}</h4>
+//                             <p>Prediction deadline: ${localDeadline}</p>
+//                             ${formatTimer(deadline, match.id)}
+//                         </div>
+//                         ${isExpired ? `<p>Prediction closed</p>` : `
+//                             <div class="make-prediction">
+//                                 <h5>Make Prediction</h5>
+//                                 <div class="radio-group">
+//                                     <label><input type="radio" name="match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
+//                                     <label><input type="radio" name="match-${match.id}" value="${match.team2}"> ${match.team2}</label>
+//                                 </div>
+//                             </div>
+//                             ${hasPredicted ? `
+//                                 <p class="current-prediction">Current prediction: ${currentPrediction.team}</p>
+//                                 ${drsWasUsed ? '<p>DRS already used.</p>' : `
+//                                     <button class="drs-button" data-match-id="${match.id}">Use DRS</button>
+//                                     <div class="radio-group drs-radio-${match.id}" style="display: none;">
+//                                         <label><input type="radio" name="drs-match-${match.id}" value="${match.team1}" required> ${match.team1}</label>
+//                                         <label><input type="radio" name="drs-match-${match.id}" value="${match.team2}"> ${match.team2}</label>
+//                                     </div>
+//                                 `}
+//                             ` : ''}
+//                         `}
+//                     </div>
+//                 `;
+//             }).join('')}
+//         `;
+
+//         // Reattach DRS listeners
+//         document.querySelectorAll('.drs-button').forEach(btn => {
+//             btn.removeEventListener('click', handleDrsClick);
+//             btn.addEventListener('click', handleDrsClick);
+//         });
+
+//         function handleDrsClick() {
+//             const matchId = this.dataset.matchId;
+//             console.log(`DRS clicked for match: ${matchId}`);
+//             this.style.display = 'none';
+//             document.querySelector(`.drs-radio-${matchId}`).style.display = 'flex';
+//         }
+
+//         clearInterval(window.timerInterval);
+//         window.timerInterval = setInterval(updateTimers, 1000);
+//     } catch (error) {
+//         console.error('Display predict error:', error);
+//         document.getElementById('predictError').textContent = 'Failed to load predictions.';
+//     }
+// }
+        // Display predictions tab with pie chart
+       // Display predictions tab with pie chart
+let predictionsPieChartInstance = null;
+
 
         // Display leaderboard
         let userBarChartInstance = null;
